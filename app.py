@@ -298,42 +298,100 @@ def clip_youtube_video():
         except ImportError:
             has_curl_cffi = False
 
-        download_cmd = [
-            ytdlp_bin,
-            # Quality: max 720p
-            "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best",
-            "--merge-output-format", "mp4",
-            # Player client: ios/android work for most videos without embedding restrictions
-            # tv_embedded is intentionally excluded — it fails for non-embeddable videos
-            "--extractor-args", "youtube:player_client=ios,android,mweb,web",
-            # Geo-bypass
-            "--geo-bypass",
-            # SSL resilience
-            "--no-check-certificates",
-            "--socket-timeout", "60",
-            # Retry logic
-            "--retries", "10",
-            "--fragment-retries", "10",
-            "--retry-sleep", "exp=1:30",
-            # Output
-            "-o", raw_download_path,
-            url
-        ]
-
-        # Only add --impersonate if curl-cffi is installed
-        if has_curl_cffi:
-            download_cmd.insert(3, "chrome")
-            download_cmd.insert(3, "--impersonate")
-
-        result = subprocess.run(download_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=480)
-        stderr_text = result.stderr.decode('utf-8', errors='ignore')
+        # Define download attempts with different fallback strategies
+        attempts = []
         
-        if result.returncode != 0 or not os.path.exists(raw_download_path) or os.path.getsize(raw_download_path) == 0:
+        # Attempt 1: Impersonate chrome with ios/android/mweb/web player client (if curl_cffi is available)
+        if has_curl_cffi:
+            attempts.append({
+                "impersonate": "chrome",
+                "player_client": "ios,android,mweb,web"
+            })
+            
+        # Attempt 2: No impersonate (standard urllib/requests), with player_client=default,-tv
+        attempts.append({
+            "impersonate": None,
+            "player_client": "default,-tv"
+        })
+        
+        # Attempt 3: No impersonate, standard ios/android/mweb/web player client
+        attempts.append({
+            "impersonate": None,
+            "player_client": "ios,android,mweb,web"
+        })
+        
+        # Attempt 4: Absolute fallback (default yt-dlp behaviour)
+        attempts.append({
+            "impersonate": None,
+            "player_client": None
+        })
+
+        success = False
+        stderr_text = ""
+        
+        for idx, attempt in enumerate(attempts, 1):
+            print(f"Download attempt {idx}/{len(attempts)}: impersonate={attempt['impersonate']}, player_client={attempt['player_client']}")
+            
+            # Clean up partial download files from previous attempts
+            if os.path.exists(raw_download_path):
+                try:
+                    os.remove(raw_download_path)
+                except Exception:
+                    pass
+            partial_path = raw_download_path + ".part"
+            if os.path.exists(partial_path):
+                try:
+                    os.remove(partial_path)
+                except Exception:
+                    pass
+
+            cmd = [
+                ytdlp_bin,
+                "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+                "--merge-output-format", "mp4",
+                "--geo-bypass",
+                "--no-check-certificates",
+                "--socket-timeout", "40",
+                "--retries", "3",
+                "--fragment-retries", "5",
+                "-o", raw_download_path
+            ]
+            
+            if attempt["impersonate"]:
+                cmd.extend(["--impersonate", attempt["impersonate"]])
+                
+            if attempt["player_client"]:
+                cmd.extend(["--extractor-args", f"youtube:player_client={attempt['player_client']}"])
+                
+            cmd.append(url)
+            
+            try:
+                # Run the command with 5 minutes (300s) timeout per attempt
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
+                stderr_text = result.stderr.decode('utf-8', errors='ignore')
+                
+                # Check if download succeeded and file exists and has size
+                if result.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
+                    success = True
+                    print(f"Download succeeded on attempt {idx}!")
+                    break
+                else:
+                    print(f"Attempt {idx} failed with return code {result.returncode}. Stderr: {stderr_text[-300:]}")
+            except subprocess.TimeoutExpired:
+                print(f"Attempt {idx} timed out.")
+                stderr_text = "Download timed out."
+                continue
+            except Exception as e:
+                print(f"Attempt {idx} encountered exception: {e}")
+                stderr_text = str(e)
+                continue
+
+        if not success:
             # Check impersonation error FIRST before generic "unavailable"
             if 'impersonate' in stderr_text.lower() or ('curl' in stderr_text.lower() and 'cffi' in stderr_text.lower()):
-                err = 'Browser impersonation library missing. Try again (it will retry without impersonation).'
+                err = 'Browser impersonation library missing. Please try a different video or link.'
             elif 'SSL' in stderr_text or 'EOF' in stderr_text:
-                err = 'YouTube SSL error. Try a different video or try again in a few seconds.'
+                err = 'YouTube SSL/Connection error (often caused by YouTube rate limits on hosting servers). Try again or try a different video.'
             elif 'Private' in stderr_text or 'members-only' in stderr_text:
                 err = 'This video is private or members-only.'
             elif 'Sign in' in stderr_text:
@@ -341,11 +399,12 @@ def clip_youtube_video():
             elif 'removed' in stderr_text or 'unavailable' in stderr_text or 'not available' in stderr_text:
                 err = 'This video is unavailable or has been removed from YouTube.'
             elif 'bot' in stderr_text.lower() or 'detected' in stderr_text.lower():
-                err = 'YouTube detected bot activity. Try a different video.'
+                err = 'YouTube detected bot activity from the hosting server. Try again in a few minutes.'
             else:
                 # Show raw error so we can diagnose
                 err = f'yt-dlp error: {stderr_text[-800:]}' if stderr_text else 'Unknown download error'
             return jsonify({'success': False, 'error': f'Download failed: {err}'}), 500
+
 
             
         # 2. Slice downloaded video
