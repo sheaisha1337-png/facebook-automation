@@ -27,6 +27,17 @@ OUTPUT_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+# ── Write Cookies File from Environment Variable if present ──
+COOKIES_FILE_PATH = os.path.join(UPLOAD_FOLDER, 'cookies.txt')
+yt_cookies_content = os.environ.get('YT_COOKIES')
+if yt_cookies_content:
+    try:
+        with open(COOKIES_FILE_PATH, 'w', encoding='utf-8') as f:
+            f.write(yt_cookies_content.strip())
+        print("[startup] Successfully wrote cookies.txt from YT_COOKIES environment variable.")
+    except Exception as e:
+        print(f"[startup] Failed to write cookies.txt: {e}")
+
 # ── Background Cleanup Thread (30-minute expiration) ──
 def start_cleanup_thread():
     def cleanup_loop():
@@ -357,6 +368,15 @@ def clip_youtube_video():
                 "-o", raw_download_path
             ]
             
+            # Use cookies if available
+            if os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0:
+                cmd.extend(["--cookies", COOKIES_FILE_PATH])
+
+            # Use proxy if available
+            yt_proxy = os.environ.get('YT_PROXY')
+            if yt_proxy:
+                cmd.extend(["--proxy", yt_proxy])
+
             if attempt["impersonate"]:
                 cmd.extend(["--impersonate", attempt["impersonate"]])
                 
