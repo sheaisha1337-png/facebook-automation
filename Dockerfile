@@ -1,10 +1,10 @@
 # ──────────────────────────────────────────────────────────────────
-#  Jigarzzz❤️ — Hugging Face Spaces Dockerfile
-#  Python 3.11 slim + FFmpeg + all deps
+#  Jigarzzz❤️ — Hugging Face Spaces Dockerfile  [v2 - 2026-06-22]
+#  Python 3.11 slim + FFmpeg + all deps + pytubefix + tor proxy
 # ──────────────────────────────────────────────────────────────────
 FROM python:3.11-slim
 
-# Install system deps: FFmpeg + ImageMagick (for moviepy text clips) + fonts
+# Install system deps: FFmpeg + ImageMagick (for moviepy text clips) + fonts + tor
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     imagemagick \
@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     fonts-liberation \
     curl \
+    tor \
     && rm -rf /var/lib/apt/lists/*
 
 # ImageMagick policy fix — allow reading/writing all file types (needed by moviepy)
@@ -41,4 +42,5 @@ ENV HOST=0.0.0.0
 EXPOSE 7860
 
 # Run with gunicorn — 1 worker, 4 threads, 300s timeout for long video jobs
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "1", "--threads", "4", "--timeout", "300", "--access-logfile", "-", "app:app"]
+# Start tor in background first so yt-dlp can use it as SOCKS5 proxy fallback
+CMD ["sh", "-c", "tor --RunAsDaemon 1 --SocksPort 9050 && sleep 3 && gunicorn --bind 0.0.0.0:7860 --workers 1 --threads 4 --timeout 300 --access-logfile - app:app"]
