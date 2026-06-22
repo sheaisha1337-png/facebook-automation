@@ -32,8 +32,38 @@ COOKIES_FILE_PATH = os.path.join(UPLOAD_FOLDER, 'cookies.txt')
 yt_cookies_content = os.environ.get('YT_COOKIES')
 if yt_cookies_content:
     try:
+        content_to_write = yt_cookies_content.strip()
+        # If it looks like a JSON array/object, try to convert it to Netscape format
+        if (content_to_write.startswith('[') and content_to_write.endswith(']')) or content_to_write.startswith('{'):
+            import json
+            try:
+                cookies_list = json.loads(content_to_write)
+                if isinstance(cookies_list, list):
+                    netscape_lines = [
+                        "# Netscape HTTP Cookie File",
+                        "# http://curl.haxx.se/rfc/cookie_spec.html",
+                        "# This is a generated file!  Do not edit.\n"
+                    ]
+                    for c in cookies_list:
+                        if isinstance(c, dict):
+                            domain = c.get('domain', '')
+                            flag = "TRUE" if domain.startswith('.') or not c.get('hostOnly', True) else "FALSE"
+                            path = c.get('path', '/')
+                            secure = "TRUE" if c.get('secure', False) else "FALSE"
+                            try:
+                                expiry = str(int(float(c.get('expirationDate', 0))))
+                            except (ValueError, TypeError):
+                                expiry = "0"
+                            name = c.get('name', '')
+                            value = c.get('value', '')
+                            netscape_lines.append(f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}")
+                    content_to_write = "\n".join(netscape_lines)
+                    print("[startup] Successfully parsed JSON cookies and converted to Netscape format.")
+            except Exception as json_err:
+                print(f"[startup] Failed to parse JSON cookies (treating as raw Netscape format): {json_err}")
+                
         with open(COOKIES_FILE_PATH, 'w', encoding='utf-8') as f:
-            f.write(yt_cookies_content.strip())
+            f.write(content_to_write)
         print("[startup] Successfully wrote cookies.txt from YT_COOKIES environment variable.")
     except Exception as e:
         print(f"[startup] Failed to write cookies.txt: {e}")
