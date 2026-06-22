@@ -28,45 +28,48 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # ── Write Cookies File from Environment Variable if present ──
-COOKIES_FILE_PATH = os.path.join(UPLOAD_FOLDER, 'cookies.txt')
+# IMPORTANT: Store in app root, NOT uploads/, so the cleanup thread never deletes it
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+COOKIES_FILE_PATH = os.path.join(APP_ROOT, 'yt_cookies.txt')
 yt_cookies_content = os.environ.get('YT_COOKIES')
 if yt_cookies_content:
     try:
+        import json as _json
         content_to_write = yt_cookies_content.strip()
-        # If it looks like a JSON array/object, try to convert it to Netscape format
-        if (content_to_write.startswith('[') and content_to_write.endswith(']')) or content_to_write.startswith('{'):
-            import json
+        # Auto-convert JSON array format to Netscape format that yt-dlp reads
+        if content_to_write.startswith('[') or content_to_write.startswith('{'):
             try:
-                cookies_list = json.loads(content_to_write)
+                cookies_list = _json.loads(content_to_write)
                 if isinstance(cookies_list, list):
                     netscape_lines = [
-                        "# Netscape HTTP Cookie File",
-                        "# http://curl.haxx.se/rfc/cookie_spec.html",
-                        "# This is a generated file!  Do not edit.\n"
+                        '# Netscape HTTP Cookie File',
+                        '# http://curl.haxx.se/rfc/cookie_spec.html',
+                        '# This is a generated file!  Do not edit.\n'
                     ]
                     for c in cookies_list:
                         if isinstance(c, dict):
-                            domain = c.get('domain', '')
-                            flag = "TRUE" if domain.startswith('.') or not c.get('hostOnly', True) else "FALSE"
-                            path = c.get('path', '/')
-                            secure = "TRUE" if c.get('secure', False) else "FALSE"
+                            domain  = c.get('domain', '')
+                            flag    = 'TRUE' if domain.startswith('.') or not c.get('hostOnly', True) else 'FALSE'
+                            path    = c.get('path', '/')
+                            secure  = 'TRUE' if c.get('secure', False) else 'FALSE'
                             try:
                                 expiry = str(int(float(c.get('expirationDate', 0))))
                             except (ValueError, TypeError):
-                                expiry = "0"
-                            name = c.get('name', '')
+                                expiry = '0'
+                            name  = c.get('name', '')
                             value = c.get('value', '')
-                            netscape_lines.append(f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}")
-                    content_to_write = "\n".join(netscape_lines)
-                    print("[startup] Successfully parsed JSON cookies and converted to Netscape format.")
-            except Exception as json_err:
-                print(f"[startup] Failed to parse JSON cookies (treating as raw Netscape format): {json_err}")
-                
-        with open(COOKIES_FILE_PATH, 'w', encoding='utf-8') as f:
-            f.write(content_to_write)
-        print("[startup] Successfully wrote cookies.txt from YT_COOKIES environment variable.")
-    except Exception as e:
-        print(f"[startup] Failed to write cookies.txt: {e}")
+                            netscape_lines.append(f'{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}')
+                    content_to_write = '\n'.join(netscape_lines)
+                    print(f'[startup] Converted {len(cookies_list)} JSON cookies → Netscape format.')
+            except Exception as _je:
+                print(f'[startup] JSON parse failed, treating as raw text: {_je}')
+        with open(COOKIES_FILE_PATH, 'w', encoding='utf-8') as _f:
+            _f.write(content_to_write)
+        print(f'[startup] cookies written → {COOKIES_FILE_PATH} ({os.path.getsize(COOKIES_FILE_PATH)} bytes)')
+    except Exception as _e:
+        print(f'[startup] Failed to write cookies: {_e}')
+else:
+    print('[startup] No YT_COOKIES env var found — downloads will run without cookies.')
 
 # ── Background Cleanup Thread (30-minute expiration) ──
 def start_cleanup_thread():
@@ -80,7 +83,8 @@ def start_cleanup_thread():
                     if not os.path.exists(folder):
                         continue
                     for f in os.listdir(folder):
-                        if f.startswith('.') or f == '.gitkeep':
+                        # Never delete the cookies file
+                        if f.startswith('.') or f == '.gitkeep' or f == 'yt_cookies.txt' or f == 'cookies.txt':
                             continue
                         fp = os.path.join(folder, f)
                         if os.path.isfile(fp):
@@ -110,6 +114,40 @@ for _f in os.listdir(OUTPUT_FOLDER):
             print(f'[cleanup] Removed temp file: {_f}')
         except Exception:
             pass
+
+@app.route('/api/debug')
+def debug_info():
+    """Debug endpoint — check cookies, yt-dlp version, env."""
+    has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
+    cookie_lines = 0
+    cookie_preview = ''
+    if has_cookies:
+        try:
+            with open(COOKIES_FILE_PATH, 'r') as _f:
+                lines = _f.readlines()
+                cookie_lines = len([l for l in lines if l.strip() and not l.startswith('#')])
+                cookie_preview = lines[3][:80] if len(lines) > 3 else '(empty)'
+        except Exception as e:
+            cookie_preview = str(e)
+
+    import subprocess as _sp
+    ytdlp_version = 'unknown'
+    try:
+        r = _sp.run(['yt-dlp', '--version'], capture_output=True, text=True, timeout=5)
+        ytdlp_version = r.stdout.strip()
+    except Exception:
+        pass
+
+    return jsonify({
+        'cookies_file_path': COOKIES_FILE_PATH,
+        'cookies_loaded': has_cookies,
+        'cookie_entries': cookie_lines,
+        'cookie_preview': cookie_preview,
+        'yt_cookies_env_set': bool(os.environ.get('YT_COOKIES')),
+        'yt_proxy_set': bool(os.environ.get('YT_PROXY')),
+        'ytdlp_version': ytdlp_version,
+    })
+
 
 # Helper to execute shell commands (e.g. yt-dlp using local venv)
 def get_pip_binary(binary_name):
@@ -405,8 +443,9 @@ def clip_youtube_video():
                 "--merge-output-format", "mp4",
                 "--geo-bypass",
                 "--no-check-certificates",
-                "--socket-timeout", "15",   # connection timeout (not total download time)
-                "--retries", "1",           # fail fast — we have our own retry loop
+                "-4",                        # force IPv4 (IPv6 ranges are more aggressively blocked)
+                "--socket-timeout", "15",
+                "--retries", "1",
                 "--fragment-retries", "2",
                 "-o", raw_download_path
             ]
@@ -449,22 +488,22 @@ def clip_youtube_video():
                 continue
 
         if not success:
-            # Check impersonation error FIRST before generic "unavailable"
+            # Always include the real yt-dlp output so bugs can be diagnosed
+            raw_err = stderr_text[-600:].strip() if stderr_text else 'No output'
             if 'impersonate' in stderr_text.lower() or ('curl' in stderr_text.lower() and 'cffi' in stderr_text.lower()):
-                err = 'Browser impersonation library missing. Please try a different video or link.'
-            elif 'SSL' in stderr_text or 'EOF' in stderr_text:
-                err = 'YouTube SSL/Connection error (often caused by YouTube rate limits on hosting servers). Try again or try a different video.'
+                err = f'Browser impersonation library issue. Detail: {raw_err}'
+            elif 'Sign in' in stderr_text or 'confirm' in stderr_text.lower():
+                err = f'YouTube requires sign-in / bot check. Cookies may be expired or missing. Detail: {raw_err}'
             elif 'Private' in stderr_text or 'members-only' in stderr_text:
-                err = 'This video is private or members-only.'
-            elif 'Sign in' in stderr_text:
-                err = 'YouTube requires sign-in for this video. Try a fully public video.'
+                err = f'This video is private or members-only. Detail: {raw_err}'
             elif 'removed' in stderr_text or 'unavailable' in stderr_text or 'not available' in stderr_text:
-                err = 'This video is unavailable or has been removed from YouTube.'
+                err = f'Video unavailable or removed. Detail: {raw_err}'
             elif 'bot' in stderr_text.lower() or 'detected' in stderr_text.lower():
-                err = 'YouTube detected bot activity from the hosting server. Try again in a few minutes.'
+                err = f'YouTube bot detection triggered. Detail: {raw_err}'
+            elif 'SSL' in stderr_text or 'EOF' in stderr_text or 'timed out' in stderr_text.lower():
+                err = f'SSL/Connection error (YouTube blocks hosting server IPs). Add/refresh cookies. Detail: {raw_err}'
             else:
-                # Show raw error so we can diagnose
-                err = f'yt-dlp error: {stderr_text[-800:]}' if stderr_text else 'Unknown download error'
+                err = f'yt-dlp error: {raw_err}'
             return jsonify({'success': False, 'error': f'Download failed: {err}'}), 500
 
 
