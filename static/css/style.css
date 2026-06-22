@@ -1336,15 +1336,20 @@ body.light-theme .close-btn {
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-xl);
     color: var(--text-primary);
-    padding: 12px 24px;
-    border-radius: var(--r-full);
+    padding: 12px 20px;
+    border-radius: var(--r-md);
     z-index: 2000;
     font-size: 0.85rem;
     font-weight: 600;
     opacity: 0;
     pointer-events: none;
     transition: all var(--t-normal) cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    white-space: nowrap;
+    max-width: 90%;
+    width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 }
 body.light-theme .toast {
     background: #ffffff;
@@ -1353,6 +1358,29 @@ body.light-theme .toast {
 .toast.show {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
+    pointer-events: auto;
+}
+
+.toast-content {
+    flex: 1;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color var(--t-fast);
+}
+.toast-close:hover {
+    color: var(--text-primary);
 }
 
 .toast.success { border-left: 4px solid var(--success); }

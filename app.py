@@ -666,48 +666,10 @@ def clip_youtube_video():
                     stderr_text = str(e)
                     continue
 
-        # ── Method E: yt-dlp via Tor SOCKS5 proxy (exits from non-datacenter IPs) ──
-        if not dl_success:
-            print('[download] All direct methods failed, trying yt-dlp via Tor ...')
-            ytdlp_bin_tor = get_pip_binary('yt-dlp')
-            has_cookies_tor = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
-            for path in [raw_download_path, raw_download_path + '.part']:
-                if os.path.exists(path):
-                    try: os.remove(path)
-                    except Exception: pass
-            tor_cmd = [
-                ytdlp_bin_tor,
-                '-f', 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best',
-                '--merge-output-format', 'mp4',
-                '--no-check-certificates',
-                '--proxy', 'socks5h://127.0.0.1:9050',  # Tor SOCKS5 (with DNS resolved on proxy)
-                '--socket-timeout', '20',
-                '--retries', '1',
-                '-o', raw_download_path
-            ]
-            if has_cookies_tor:
-                tor_cmd.extend(['--cookies', COOKIES_FILE_PATH])
-            tor_cmd.append(url)
-            try:
-                tor_res = subprocess.run(tor_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-                tor_stderr = tor_res.stderr.decode('utf-8', errors='ignore')
-                if tor_res.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
-                    dl_success = True
-                    print('[yt-dlp/tor] Succeeded via Tor proxy!')
-                else:
-                    stderr_text = tor_stderr
-                    print(f'[yt-dlp/tor] Failed: {tor_stderr[-200:]}')
-            except subprocess.TimeoutExpired:
-                stderr_text = 'Tor download timed out.'
-                print('[yt-dlp/tor] Timed out.')
-            except Exception as e:
-                stderr_text = str(e)
-                print(f'[yt-dlp/tor] Exception: {e}')
-
         if not dl_success:
             raw_err = stderr_text[-600:].strip() if stderr_text else 'All download methods failed'
             return jsonify({'success': False,
-                            'error': f'Download failed — tried cobalt, pytubefix, invidious, yt-dlp+cookies, tor. Detail: {raw_err}'}), 500
+                            'error': f'Download failed — tried cobalt, pytubefix, invidious, yt-dlp+cookies. Detail: {raw_err}'}), 500
 
 
             

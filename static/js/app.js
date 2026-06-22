@@ -11,12 +11,33 @@ const state = {
 function $(id)   { return document.getElementById(id); }
 function $q(sel) { return document.querySelector(sel); }
 
-function showToast(msg, type = 'success', duration = 3500) {
+let toastTimeout = null;
+
+function showToast(msg, type = 'success', duration = 4000) {
     const t = $('toast');
     if (!t) return;
-    t.textContent = msg;
+
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+        toastTimeout = null;
+    }
+
+    t.innerHTML = `
+        <span class="toast-content">${msg}</span>
+        <button type="button" class="toast-close" id="toast-close-btn" title="Dismiss Alert">&times;</button>
+    `;
     t.className = `toast ${type} show`;
-    setTimeout(() => t.classList.remove('show'), duration);
+
+    t.querySelector('#toast-close-btn')?.addEventListener('click', () => {
+        t.classList.remove('show');
+    });
+
+    // Keep error toasts visible until explicitly dismissed
+    if (type !== 'error') {
+        toastTimeout = setTimeout(() => {
+            t.classList.remove('show');
+        }, duration);
+    }
 }
 
 function animateCount(el, target) {
