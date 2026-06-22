@@ -239,36 +239,53 @@ def download_via_pytubefix(url, output_path):
     try:
         from pytubefix import YouTube
         from pytubefix.cli import on_progress
-        print(f'[pytubefix] Trying {url} ...')
-        yt = YouTube(url, on_progress_callback=on_progress,
-                     use_oauth=False, allow_oauth_cache=False)
-        # Try progressive (combined audio+video) MP4 first
-        stream = (
-            yt.streams
-              .filter(progressive=True, file_extension='mp4')
-              .order_by('resolution')
-              .last()  # highest resolution
-        )
-        if not stream:
-            # Fall back to any MP4
-            stream = yt.streams.filter(file_extension='mp4').first()
-        if not stream:
-            print('[pytubefix] No suitable stream found')
-            return False
-        print(f'[pytubefix] Downloading {stream.resolution} stream ...')
-        import tempfile, shutil
-        # pytubefix downloads to a directory, so use a temp dir
-        tmp_dir = tempfile.mkdtemp()
-        try:
-            dl_path = stream.download(output_path=tmp_dir, filename='video.mp4')
-            if dl_path and os.path.exists(dl_path) and os.path.getsize(dl_path) > 0:
-                shutil.move(dl_path, output_path)
-                print(f'[pytubefix] Success! {os.path.getsize(output_path)//1024} KB')
-                return True
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+        
+        # Try multiple clients to find one that YouTube doesn't block or prompt on.
+        # 'WEB' triggers node-based signature generation if node is available.
+        # 'ANDROID' is the mobile client.
+        clients = ['WEB', 'ANDROID', 'ANDROID_VR']
+        
+        for client in clients:
+            try:
+                print(f'[pytubefix] Trying client={client} for {url} ...')
+                yt = YouTube(
+                    url,
+                    client=client,
+                    on_progress_callback=on_progress,
+                    use_oauth=False,
+                    allow_oauth_cache=False,
+                    use_po_token=False  # Do NOT use True, it prompts interactively in terminal
+                )
+                # Try progressive (combined audio+video) MP4 first
+                stream = (
+                    yt.streams
+                      .filter(progressive=True, file_extension='mp4')
+                      .order_by('resolution')
+                      .last()  # highest resolution
+                )
+                if not stream:
+                    # Fall back to any MP4
+                    stream = yt.streams.filter(file_extension='mp4').first()
+                if not stream:
+                    print(f'[pytubefix] No suitable stream found with client={client}')
+                    continue
+                print(f'[pytubefix] Downloading {stream.resolution} stream with client={client} ...')
+                import tempfile, shutil
+                # pytubefix downloads to a directory, so use a temp dir
+                tmp_dir = tempfile.mkdtemp()
+                try:
+                    dl_path = stream.download(output_path=tmp_dir, filename='video.mp4')
+                    if dl_path and os.path.exists(dl_path) and os.path.getsize(dl_path) > 0:
+                        shutil.move(dl_path, output_path)
+                        print(f'[pytubefix] Success with client={client}! {os.path.getsize(output_path)//1024} KB')
+                        return True
+                finally:
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception as client_err:
+                print(f'[pytubefix] Client {client} failed: {client_err}')
+                
     except Exception as e:
-        print(f'[pytubefix] Error: {e}')
+        print(f'[pytubefix] General Error: {e}')
     return False
 
 
@@ -283,17 +300,39 @@ def download_via_invidious(url, output_path):
         print('[invidious] Could not extract video ID')
         return False
 
+    # Default fallback list
     instances = [
         'https://inv.nadeko.net',
-        'https://invidious.fdn.fr',
-        'https://invidious.privacydev.net',
-        'https://iv.datura.network',
-        'https://invidious.projectsegfau.lt',
-        'https://yt.cdaut.de',
         'https://invidious.nerdvpn.de',
-        'https://vid.puffyan.us',
+        'https://invidious.f5.si',
+        'https://yt.chocolatemoo53.com',
+        'https://inv.thepixora.com',
     ]
+
+    try:
+        print('[invidious] Querying public instances API for live hosts ...')
+        api_resp = _req.get('https://api.invidious.io/instances.json', timeout=10)
+        if api_resp.status_code == 200:
+            live_instances = []
+            for item in api_resp.json():
+                try:
+                    info = item[1]
+                    monitor = info.get('monitor')
+                    if monitor and not monitor.get('down', True) and monitor.get('last_status') == 200:
+                        uri = info.get('uri')
+                        if uri:
+                            live_instances.append(uri.rstrip('/'))
+                except Exception:
+                    pass
+            if live_instances:
+                print(f'[invidious] Found {len(live_instances)} live healthy instances.')
+                # Prioritize live instances, appending defaults just in case
+                instances = live_instances + [inst for inst in instances if inst not in live_instances]
+    except Exception as api_err:
+        print(f'[invidious] Failed to fetch live instances: {api_err}. Using defaults.')
+
     for instance in instances:
+        instance = instance.rstrip('/')
         try:
             print(f'[invidious] Querying {instance} for {vid_id} ...')
             api = f'{instance}/api/v1/videos/{vid_id}?fields=formatStreams'
@@ -630,7 +669,7 @@ def clip_youtube_video():
                 '-f', 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best',
                 '--merge-output-format', 'mp4',
                 '--no-check-certificates',
-                '--proxy', 'socks5://127.0.0.1:9050',  # Tor SOCKS5
+                '--proxy', 'socks5h://127.0.0.1:9050',  # Tor SOCKS5 (with DNS resolved on proxy)
                 '--socket-timeout', '20',
                 '--retries', '1',
                 '-o', raw_download_path

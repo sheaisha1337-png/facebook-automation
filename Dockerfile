@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     curl \
     tor \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # ImageMagick policy fix — allow reading/writing all file types (needed by moviepy)
@@ -41,6 +42,6 @@ ENV HOST=0.0.0.0
 # Expose port
 EXPOSE 7860
 
-# Run with gunicorn — 1 worker, 4 threads, 300s timeout for long video jobs
-# Start tor in background first so yt-dlp can use it as SOCKS5 proxy fallback
-CMD ["sh", "-c", "tor --RunAsDaemon 1 --SocksPort 9050 && sleep 3 && gunicorn --bind 0.0.0.0:7860 --workers 1 --threads 4 --timeout 300 --access-logfile - app:app"]
+# Run startup script that configures and starts Tor and Gunicorn
+RUN chmod +x start.sh
+CMD ["/app/start.sh"]
