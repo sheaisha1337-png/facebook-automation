@@ -1,0 +1,10 @@
+Flask==3.0.3
+yt-dlp==2026.6.9
+moviepy==1.0.3
+edge-tts==7.2.8
+pydub==0.25.1
+numpy
+Pillow>=10.0.0
+requests
+gunicorn
+curl-cffi>=0.7.0

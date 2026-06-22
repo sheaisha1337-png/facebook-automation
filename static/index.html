@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Automation – Bypass Copyright</title>
+    <meta name="description" content="Futuristic cyber command dashboard for Facebook Automation.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=13">
+</head>
+<body>
+    <!-- Ambient Background Glows -->
+    <div class="decor-orb decor-orb-cyan"></div>
+    <div class="decor-orb decor-orb-purple"></div>
+
+    <div class="app-layout">
+        <!-- ═══════════════════════════════════════════
+             HEADER NAVBAR
+         ════════════════════════════════════════════ -->
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <div class="brand-logo">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+                        <polyline points="2 8.5 12 15 22 8.5"/>
+                        <line x1="12" y1="15" x2="12" y2="22"/>
+                    </svg>
+                    <div class="brand-text">
+                        <h1>Facebook Automation</h1>
+                        <span class="brand-subtitle">Bypass Copyright</span>
+                    </div>
+                </div>
+            </div>
+            <div class="navbar-controls">
+                <!-- Eye-Catching Glowing Badge -->
+                <span class="meta-badge-glow">100% Copyright Bypass</span>
+                <!-- Theme Switcher Toggle -->
+                <button class="theme-toggle-btn" id="theme-toggle" type="button" title="Switch Theme">
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:none;">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <!-- ═══════════════════════════════════════════
+             METRICS GRID
+         ════════════════════════════════════════════ -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon-box files-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="stat-files">0</span>
+                    <span class="metric-label">Exported Videos</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon-box clips-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 10a4 4 0 108 0 4 4 0 00-8 0zm0 0V6a4 4 0 018 0v4m-8 0h8m-4 4v4m0 0l-3-3m3 3l3-3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="stat-clips">0</span>
+                    <span class="metric-label">Clips Created</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════
+             3-COLUMN MAIN GRID
+         ════════════════════════════════════════════ -->
+        <form id="clip-form" class="workspace-form">
+            <div class="dashboard-grid-3col">
+                
+                <!-- COLUMN 1: Import & Crop (Steps 1, 2, 3) -->
+                <div class="workspace-column">
+                    <div class="panel-header">
+                        <h2>1. Import &amp; Slices</h2>
+                        <p class="panel-subtitle">Acquire video content and configure slicing thresholds.</p>
+                    </div>
+
+                    <!-- STEP 1: YouTube Video URL -->
+                    <div class="step-card">
+                        <div class="step-header">
+                            <span class="step-num">1</span>
+                            <div class="step-title-wrap">
+                                <h3>YouTube Video URL</h3>
+                                <p class="step-desc">Enter the public YouTube video link to import.</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-with-icon">
+                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Aspect Ratio -->
+                    <div class="step-card">
+                        <div class="step-header">
+                            <span class="step-num">2</span>
+                            <div class="step-title-wrap">
+                                <h3>Output Format</h3>
+                                <p class="step-desc">Select the canvas layout configuration.</p>
+                            </div>
+                        </div>
+                        <div class="aspect-ratio-grid">
+                            <label class="aspect-card">
+                                <input type="radio" name="aspect_ratio" value="original" checked>
+                                <div class="aspect-preview original-preview">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-info">
+                                    <span class="aspect-title">Original</span>
+                                </div>
+                            </label>
+
+                            <label class="aspect-card">
+                                <input type="radio" name="aspect_ratio" value="vertical">
+                                <div class="aspect-preview vertical-preview">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="7" y="3" width="10" height="18" rx="1.5"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-info">
+                                    <span class="aspect-title">Vertical (9:16)</span>
+                                </div>
+                            </label>
+
+                            <label class="aspect-card">
+                                <input type="radio" name="aspect_ratio" value="horizontal">
+                                <div class="aspect-preview horizontal-preview">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="6" width="18" height="12" rx="1.5"/>
+                                    </svg>
+                                </div>
+                                <div class="aspect-info">
+                                    <span class="aspect-title">Horizontal (16:9)</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Slicing Method -->
+                    <div class="step-card">
+                        <div class="step-header">
+                            <span class="step-num">3</span>
+                            <div class="step-title-wrap">
+                                <h3>Slicing Method</h3>
+                                <p class="step-desc">Select split configurations.</p>
+                            </div>
+                        </div>
+
+                        <div class="segment-tabs">
+                            <button type="button" class="segment-tab-btn active" data-type="auto" id="clip-toggle-auto">
+                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Auto-Split
+                            </button>
+                            <button type="button" class="segment-tab-btn" data-type="timestamps" id="clip-toggle-ts">
+                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                Timestamps
+                            </button>
+                        </div>
+
+                        <!-- Auto Split Panel -->
+                        <div id="auto-clip-panel" class="slicing-panel active">
+                            <div class="form-group inline-row">
+                                <label for="interval">Duration per segment</label>
+                                <div class="input-suffix-group">
+                                    <input type="number" id="interval" name="interval" value="30" min="1" max="1800">
+                                    <span class="input-suffix">s</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Timestamps Panel -->
+                        <div id="timestamps-clip-panel" class="slicing-panel">
+                            <div class="form-group">
+                                <label for="timestamps">Timestamp Ranges (Seconds)</label>
+                                <input type="text" id="timestamps" name="timestamps" placeholder="e.g. 10-40, 55-85">
+                                <span class="input-helper">Comma-separated start-end frames</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMN 2: Customization & Rendering (Step 4 & Action button) -->
+                <div class="workspace-column">
+                    <div class="panel-header">
+                        <h2>2. Filters &amp; Output</h2>
+                        <p class="panel-subtitle">Evade automated matching algorithms and compile video files.</p>
+                    </div>
+
+                    <!-- STEP 4: Safety Filters -->
+                    <div class="step-card">
+                        <div class="step-header">
+                            <span class="step-num">4</span>
+                            <div class="step-title-wrap">
+                                <h3>Safety Customizations</h3>
+                                <p class="step-desc">Configure visual adjustments to structure layout transformations.</p>
+                            </div>
+                        </div>
+
+                        <div class="toggles-grid">
+                            <label class="toggle-control">
+                                <span class="toggle-label">↔ Flip</span>
+                                <input type="checkbox" name="mirror" value="true" checked>
+                                <span class="toggle-switch"></span>
+                            </label>
+
+                            <label class="toggle-control">
+                                <span class="toggle-label">🔍 Zoom</span>
+                                <input type="checkbox" name="zoom" value="true" checked>
+                                <span class="toggle-switch"></span>
+                            </label>
+
+                            <label class="toggle-control">
+                                <span class="toggle-label">🎨 Color</span>
+                                <input type="checkbox" name="color_shift" value="true" checked>
+                                <span class="toggle-switch"></span>
+                            </label>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="text_overlay">Text Overlay Watermark</label>
+                                <input type="text" id="text_overlay" name="text_overlay" placeholder="e.g., Custom Brand Overlay">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="border_color">Border Color</label>
+                                <select id="border_color" name="border_color">
+                                    <option value="none" selected>No Border</option>
+                                    <option value="black">Black</option>
+                                    <option value="green">Green (Green Screen)</option>
+                                    <option value="blue">Blue</option>
+                                    <option value="red">Red</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="border_width">Width (px)</label>
+                                <input type="number" id="border_width" name="border_width" value="0" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="speed">Video Speed</label>
+                                <select id="speed" name="speed">
+                                    <option value="1.0">Standard (1.0×)</option>
+                                    <option value="1.04" selected>Safe Speed-up (1.04×)</option>
+                                    <option value="1.08">Fast Speed-up (1.08×)</option>
+                                    <option value="0.95">Slight Slow-down (0.95×)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pitch_shift">Audio Pitch</label>
+                                <select id="pitch_shift" name="pitch_shift">
+                                    <option value="0.0">Normal (0.0)</option>
+                                    <option value="0.8" selected>Slight High (+0.8)</option>
+                                    <option value="1.5">High Pitch (+1.5)</option>
+                                    <option value="-0.8">Slight Low (-0.8)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container" id="clip-progress">
+                        <div class="progress-details">
+                            <span class="progress-status">
+                                <span class="spinner-dot"></span>
+                                <span id="clip-step">Downloading video…</span>
+                            </span>
+                            <span class="progress-percent" id="clip-pct">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="clip-fill"></div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-button" id="clip-submit-btn">
+                        <span class="btn-text">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Create &amp; Bypass Video Clips
+                        </span>
+                        <span class="btn-spinner"></span>
+                    </button>
+                </div>
+
+                <!-- COLUMN 3: Exported Library -->
+                <div class="library-panel">
+                    <div class="panel-header library-header">
+                        <div>
+                            <h2>Exported Clips</h2>
+                            <p class="panel-subtitle">Automatically expires in 30 minutes.</p>
+                        </div>
+                        <div class="library-actions">
+                            <button class="library-action-btn refresh-btn" id="refresh-gallery" type="button" title="Refresh list">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l.56-.56" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button class="library-action-btn clear-btn" id="clear-library-btn" type="button" title="Clear all files">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="search-wrap">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" id="library-search" placeholder="Search files…">
+                    </div>
+
+                    <!-- Gallery List -->
+                    <div class="library-list" id="gallery-container">
+                        <div class="empty-library">
+                            <div class="empty-art">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                                    <line x1="7" y1="2" x2="7" y2="22"/>
+                                    <line x1="17" y1="2" x2="17" y2="22"/>
+                                    <line x1="2" y1="12" x2="22" y2="12"/>
+                                </svg>
+                            </div>
+                            <p class="empty-title">No exported clips</p>
+                            <p class="empty-desc">Run a clipping operation to begin.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /dashboard-grid-3col -->
+        </form>
+    </div>
+
+    <!-- VIDEO PLAYER MODAL -->
+    <div class="modal" id="video-modal">
+        <div class="modal-overlay" id="modal-close"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">▶ Playback</h3>
+                <button class="close-btn" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <video id="modal-player" controls></video>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast system -->
+    <div id="toast" class="toast"></div>
+
+    <script src="js/app.js?v=13"></script>
+</body>
+</html>

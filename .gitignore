@@ -1,0 +1,43 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment (DO NOT upload to HF Spaces)
+venv/
+env/
+.venv/
+ENV/
+
+# Uploaded and generated files (too large for git — keep folders via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test/temp files
+test_*.png
+test_*.mp4
+*.temp
+*.part
+TEMP_MPY*
+
+# Logs
+*.log
