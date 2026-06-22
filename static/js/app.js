@@ -212,11 +212,39 @@ function initClipForm() {
     const form = $('clip-form');
     if (!form) return;
 
+    // Import source tab switching logic
+    const sourceToggles = document.querySelectorAll('.source-tabs .segment-tab-btn');
+    let activeSource = 'youtube'; // default
+
+    sourceToggles.forEach(btn => {
+        btn.addEventListener('click', () => {
+            sourceToggles.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeSource = btn.dataset.source;
+            $('source-panel-youtube')?.classList.toggle('active', activeSource === 'youtube');
+            $('source-panel-upload')?.classList.toggle('active', activeSource === 'upload');
+        });
+    });
+
+    $('video_file')?.addEventListener('change', e => {
+        const file = e.target.files[0];
+        const label = $('file-name-label');
+        if (label) label.textContent = file ? file.name : 'No file selected';
+    });
+
     form.addEventListener('submit', async e => {
         e.preventDefault();
-        const url = $('url')?.value.trim();
-        if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
-            showToast('⚠️ Please enter a valid YouTube URL', 'error'); return;
+
+        if (activeSource === 'youtube') {
+            const url = $('url')?.value.trim();
+            if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+                showToast('⚠️ Please enter a valid YouTube URL', 'error'); return;
+            }
+        } else {
+            const fileInput = $('video_file');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                showToast('⚠️ Please select a local video file to upload', 'error'); return;
+            }
         }
 
         const btn = $('clip-submit-btn');
@@ -224,7 +252,7 @@ function initClipForm() {
         showProgress('clip-progress');
 
         const steps = [
-            { pct: 20, label: '⬇️ Downloading video…',        dur: 3000 },
+            { pct: 20, label: activeSource === 'youtube' ? '⬇️ Downloading video…' : '⬇️ Uploading video…', dur: 3000 },
             { pct: 50, label: '✂️ Slicing into clips…',         dur: 2500 },
             { pct: 75, label: '🎨 Applying safety filters…',   dur: 2000 },
             { pct: 90, label: '💾 Saving clips to library…',   dur: 1200 },
@@ -238,6 +266,8 @@ function initClipForm() {
             if (activeMethodBtn) {
                 fd.set('slicing_method', activeMethodBtn.dataset.type);
             }
+            // Explicitly set source type
+            fd.set('import_source', activeSource);
             
             const res = await fetch('/api/clip', { method: 'POST', body: fd });
             const data = await res.json();

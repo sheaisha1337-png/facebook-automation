@@ -1365,3 +1365,50 @@ body.light-theme .toast {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================================
+   FILE UPLOAD WIDGET STYLING
+   ============================================================ */
+.file-upload-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+}
+.file-upload-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--r-sm);
+    padding: 10px 16px;
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    display: flex;
+    align-items: center;
+}
+.file-upload-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--primary);
+}
+.file-name-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 550;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+body.light-theme .file-upload-btn {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: #cbd5e1;
+}
+body.light-theme .file-upload-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: #4f46e5;
+}
+

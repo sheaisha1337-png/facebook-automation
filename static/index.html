@@ -97,21 +97,57 @@
                         <p class="panel-subtitle">Acquire video content and configure slicing thresholds.</p>
                     </div>
 
-                    <!-- STEP 1: YouTube Video URL -->
+                    <!-- STEP 1: Import Source -->
                     <div class="step-card">
                         <div class="step-header">
                             <span class="step-num">1</span>
                             <div class="step-title-wrap">
-                                <h3>YouTube Video URL</h3>
-                                <p class="step-desc">Enter the public YouTube video link to import.</p>
+                                <h3>Import Source</h3>
+                                <p class="step-desc">Select whether to import from YouTube or upload a local video.</p>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <div class="input-with-icon">
-                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"/>
+                        
+                        <div class="segment-tabs source-tabs" style="margin-bottom: 12px;">
+                            <button type="button" class="segment-tab-btn active" data-source="youtube" id="source-toggle-yt">
+                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/>
+                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
                                 </svg>
-                                <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                                YouTube Link
+                            </button>
+                            <button type="button" class="segment-tab-btn" data-source="upload" id="source-toggle-upload">
+                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                </svg>
+                                Upload File
+                            </button>
+                        </div>
+
+                        <!-- YouTube Link Panel -->
+                        <div id="source-panel-youtube" class="slicing-panel active">
+                            <div class="form-group">
+                                <div class="input-with-icon">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Local Upload Panel -->
+                        <div id="source-panel-upload" class="slicing-panel">
+                            <div class="form-group">
+                                <div class="file-upload-wrapper">
+                                    <input type="file" id="video_file" name="video_file" accept="video/*" style="display: none;">
+                                    <button type="button" class="file-upload-btn" onclick="document.getElementById('video_file').click()">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                        </svg>
+                                        Choose Video File
+                                    </button>
+                                    <span id="file-name-label" class="file-name-label">No file selected</span>
+                                </div>
                             </div>
                         </div>
                     </div>

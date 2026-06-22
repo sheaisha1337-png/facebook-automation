@@ -550,8 +550,10 @@ def clip_youtube_video():
     """
     try:
         url = request.form.get('url')
-        if not url:
-            return jsonify({'success': False, 'error': 'YouTube URL is required.'}), 400
+        video_file = request.files.get('video_file')
+        
+        if not url and (not video_file or video_file.filename == ''):
+            return jsonify({'success': False, 'error': 'YouTube URL or local video file upload is required.'}), 400
             
         mode = request.form.get('mode', 'auto') # 'auto' or 'timestamps'
         interval = int(request.form.get('interval', 8))
@@ -578,11 +580,20 @@ def clip_youtube_video():
         job_id = str(uuid.uuid4())
         raw_download_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_raw.mp4")
         
-        # 1. Download YouTube Video — try cobalt/invidious first (bypass datacenter block)
-        print(f'[download] Starting download for {url}')
+        dl_success = False
+        
+        # 1. Acquire Video File (either via direct upload or YouTube download)
+        if video_file and video_file.filename != '':
+            print(f'[upload] Saving uploaded video file to {raw_download_path} ...')
+            video_file.save(raw_download_path)
+            if os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
+                dl_success = True
+                print('[upload] Video file successfully uploaded and verified!')
+        else:
+            print(f'[download] Starting YouTube download for {url}')
 
-        # ── Method A: cobalt.tools (best — no IP restrictions) ──────────────
-        dl_success = download_via_cobalt(url, raw_download_path)
+            # ── Method A: cobalt.tools (best — no IP restrictions) ──────────────
+            dl_success = download_via_cobalt(url, raw_download_path)
 
         # ── Method B: pytubefix (different request path — bypasses SSL block) ─
         if not dl_success:
