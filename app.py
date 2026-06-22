@@ -339,100 +339,112 @@ def clip_youtube_video():
         except ImportError:
             has_curl_cffi = False
 
-        # Define download attempts with different fallback strategies
+        # Check cookies availability upfront
+        has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
+        yt_proxy = os.environ.get('YT_PROXY', '')
+
+        # Build streamlined attempt strategies — cookies-first, fail fast
         attempts = []
-        
-        # Attempt 1: Impersonate chrome with ios/android/mweb/web player client (if curl_cffi is available)
-        if has_curl_cffi:
+
+        if has_cookies:
+            # Strategy 1 (BEST): cookies + impersonate chrome (fastest bypass)
+            if has_curl_cffi:
+                attempts.append({
+                    "impersonate": "chrome",
+                    "player_client": "ios,android,web",
+                    "quality": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best",
+                    "timeout": 120
+                })
+            # Strategy 2: cookies + no impersonate + default client
             attempts.append({
-                "impersonate": "chrome",
-                "player_client": "ios,android,mweb,web"
+                "impersonate": None,
+                "player_client": "default,-tv",
+                "quality": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best",
+                "timeout": 120
             })
-            
-        # Attempt 2: No impersonate (standard urllib/requests), with player_client=default,-tv
-        attempts.append({
-            "impersonate": None,
-            "player_client": "default,-tv"
-        })
-        
-        # Attempt 3: No impersonate, standard ios/android/mweb/web player client
-        attempts.append({
-            "impersonate": None,
-            "player_client": "ios,android,mweb,web"
-        })
-        
-        # Attempt 4: Absolute fallback (default yt-dlp behaviour)
-        attempts.append({
-            "impersonate": None,
-            "player_client": None
-        })
+        else:
+            # No cookies — try impersonate first, then plain fallbacks
+            if has_curl_cffi:
+                attempts.append({
+                    "impersonate": "chrome",
+                    "player_client": "ios,android,web",
+                    "quality": "bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best",
+                    "timeout": 90
+                })
+            attempts.append({
+                "impersonate": None,
+                "player_client": "default,-tv",
+                "quality": "bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best",
+                "timeout": 90
+            })
+            # Last resort: lowest quality, default client
+            attempts.append({
+                "impersonate": None,
+                "player_client": None,
+                "quality": "worst[ext=mp4]/worst",
+                "timeout": 60
+            })
 
         success = False
         stderr_text = ""
-        
+
         for idx, attempt in enumerate(attempts, 1):
-            print(f"Download attempt {idx}/{len(attempts)}: impersonate={attempt['impersonate']}, player_client={attempt['player_client']}")
-            
-            # Clean up partial download files from previous attempts
-            if os.path.exists(raw_download_path):
-                try:
-                    os.remove(raw_download_path)
-                except Exception:
-                    pass
-            partial_path = raw_download_path + ".part"
-            if os.path.exists(partial_path):
-                try:
-                    os.remove(partial_path)
-                except Exception:
-                    pass
+            print(f"[yt-dlp] Attempt {idx}/{len(attempts)}: impersonate={attempt['impersonate']}, player_client={attempt['player_client']}, timeout={attempt['timeout']}s")
+
+            # Clean up any partial files from previous attempt
+            for path in [raw_download_path, raw_download_path + ".part"]:
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
 
             cmd = [
                 ytdlp_bin,
-                "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+                "-f", attempt["quality"],
                 "--merge-output-format", "mp4",
                 "--geo-bypass",
                 "--no-check-certificates",
-                "--socket-timeout", "40",
-                "--retries", "3",
-                "--fragment-retries", "5",
+                "--socket-timeout", "15",   # connection timeout (not total download time)
+                "--retries", "1",           # fail fast — we have our own retry loop
+                "--fragment-retries", "2",
                 "-o", raw_download_path
             ]
-            
-            # Use cookies if available
-            if os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0:
+
+            if has_cookies:
                 cmd.extend(["--cookies", COOKIES_FILE_PATH])
 
-            # Use proxy if available
-            yt_proxy = os.environ.get('YT_PROXY')
             if yt_proxy:
                 cmd.extend(["--proxy", yt_proxy])
 
             if attempt["impersonate"]:
                 cmd.extend(["--impersonate", attempt["impersonate"]])
-                
+
             if attempt["player_client"]:
                 cmd.extend(["--extractor-args", f"youtube:player_client={attempt['player_client']}"])
-                
+
             cmd.append(url)
-            
+
             try:
-                # Run the command with 5 minutes (300s) timeout per attempt
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=attempt["timeout"])
                 stderr_text = result.stderr.decode('utf-8', errors='ignore')
-                
-                # Check if download succeeded and file exists and has size
+
                 if result.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
                     success = True
-                    print(f"Download succeeded on attempt {idx}!")
+                    print(f"[yt-dlp] Download succeeded on attempt {idx}!")
                     break
                 else:
-                    print(f"Attempt {idx} failed with return code {result.returncode}. Stderr: {stderr_text[-300:]}")
+                    print(f"[yt-dlp] Attempt {idx} failed (rc={result.returncode}). Error: {stderr_text[-200:]}")
+                    # If it is a clear block (bot/sign-in), no point retrying
+                    if any(kw in stderr_text for kw in ['Sign in', 'bot', 'Private', 'members-only', 'removed', 'not available']):
+                        print("[yt-dlp] Hard block detected — stopping retries early.")
+                        break
             except subprocess.TimeoutExpired:
-                print(f"Attempt {idx} timed out.")
+                print(f"[yt-dlp] Attempt {idx} timed out after {attempt['timeout']}s.")
                 stderr_text = "Download timed out."
                 continue
             except Exception as e:
-                print(f"Attempt {idx} encountered exception: {e}")
+                print(f"[yt-dlp] Attempt {idx} exception: {e}")
                 stderr_text = str(e)
                 continue
 
