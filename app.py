@@ -138,6 +138,14 @@ def debug_info():
     except Exception:
         pass
 
+    curl_cffi_loaded = False
+    curl_cffi_error = ''
+    try:
+        import curl_cffi
+        curl_cffi_loaded = True
+    except Exception as ce:
+        curl_cffi_error = str(ce)
+
     return jsonify({
         'cookies_file_path': COOKIES_FILE_PATH,
         'cookies_loaded': has_cookies,
@@ -146,6 +154,8 @@ def debug_info():
         'yt_cookies_env_set': bool(os.environ.get('YT_COOKIES')),
         'yt_proxy_set': bool(os.environ.get('YT_PROXY')),
         'ytdlp_version': ytdlp_version,
+        'curl_cffi_loaded': curl_cffi_loaded,
+        'curl_cffi_error': curl_cffi_error,
     })
 
 
