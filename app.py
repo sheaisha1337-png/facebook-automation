@@ -173,7 +173,7 @@ def _extract_video_id(url):
 def download_via_cobalt(url, output_path):
     """
     Download via cobalt.tools API — works from datacenter IPs.
-    Tries multiple public cobalt instances.
+    Tries multiple public cobalt instances with both old and new API formats.
     """
     import requests as _req
     instances = [
@@ -181,42 +181,94 @@ def download_via_cobalt(url, output_path):
         'https://cobalt.api.timelessnesses.me',
         'https://cobalt.tools.nadeko.net',
     ]
-    headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-    }
-    payload = {
-        'url': url,
-        'vQuality': '720',
-        'filenamePattern': 'basic',
-        'isAudioOnly': False,
-        'disableMetadata': True,
-    }
+    # Try both v7 (new) and v6 (old) payload formats
+    payloads = [
+        # cobalt v7+ format
+        {
+            'url': url,
+            'videoQuality': '720',
+            'filenameStyle': 'basic',
+            'downloadMode': 'auto',
+        },
+        # cobalt v6 format (older instances)
+        {
+            'url': url,
+            'vQuality': '720',
+            'filenamePattern': 'basic',
+            'isAudioOnly': False,
+            'disableMetadata': True,
+        },
+    ]
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
     for instance in instances:
+        for payload in payloads:
+            try:
+                print(f'[cobalt] Trying {instance} ...')
+                resp = _req.post(f'{instance}/', json=payload, headers=headers, timeout=20)
+                if resp.status_code not in (200, 201):
+                    print(f'[cobalt] {instance} returned HTTP {resp.status_code}')
+                    break  # try next instance, not next payload
+                data = resp.json()
+                status = data.get('status', '')
+                dl_url = data.get('url', '')
+                if status in ('stream', 'tunnel', 'redirect', 'local', 'picker') and dl_url:
+                    print(f'[cobalt] Got URL ({status}), downloading ...')
+                    with _req.get(dl_url, stream=True, timeout=300,
+                                  headers={'User-Agent': 'Mozilla/5.0'}) as r:
+                        r.raise_for_status()
+                        with open(output_path, 'wb') as f:
+                            for chunk in r.iter_content(65536):
+                                f.write(chunk)
+                    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        print(f'[cobalt] Success! {os.path.getsize(output_path)//1024} KB')
+                        return True
+                else:
+                    print(f'[cobalt] Unexpected status from {instance}: {status} | {data}')
+                    break
+            except Exception as e:
+                print(f'[cobalt] Error with {instance}: {e}')
+                break
+    return False
+
+
+def download_via_pytubefix(url, output_path):
+    """
+    Download via pytubefix — uses different request patterns than yt-dlp
+    and often works from datacenter IPs where yt-dlp SSL-fails.
+    """
+    try:
+        from pytubefix import YouTube
+        from pytubefix.cli import on_progress
+        print(f'[pytubefix] Trying {url} ...')
+        yt = YouTube(url, on_progress_callback=on_progress,
+                     use_oauth=False, allow_oauth_cache=False)
+        # Try progressive (combined audio+video) MP4 first
+        stream = (
+            yt.streams
+              .filter(progressive=True, file_extension='mp4')
+              .order_by('resolution')
+              .last()  # highest resolution
+        )
+        if not stream:
+            # Fall back to any MP4
+            stream = yt.streams.filter(file_extension='mp4').first()
+        if not stream:
+            print('[pytubefix] No suitable stream found')
+            return False
+        print(f'[pytubefix] Downloading {stream.resolution} stream ...')
+        import tempfile, shutil
+        # pytubefix downloads to a directory, so use a temp dir
+        tmp_dir = tempfile.mkdtemp()
         try:
-            print(f'[cobalt] Trying {instance} ...')
-            resp = _req.post(f'{instance}/', json=payload, headers=headers, timeout=20)
-            if resp.status_code != 200:
-                print(f'[cobalt] {instance} returned HTTP {resp.status_code}')
-                continue
-            data = resp.json()
-            status = data.get('status', '')
-            dl_url = data.get('url', '')
-            if status in ('stream', 'tunnel', 'redirect', 'local') and dl_url:
-                print(f'[cobalt] Got URL ({status}), downloading ...')
-                with _req.get(dl_url, stream=True, timeout=300,
-                              headers={'User-Agent': 'Mozilla/5.0'}) as r:
-                    r.raise_for_status()
-                    with open(output_path, 'wb') as f:
-                        for chunk in r.iter_content(65536):
-                            f.write(chunk)
-                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                    print(f'[cobalt] Success! {os.path.getsize(output_path)//1024} KB')
-                    return True
-            else:
-                print(f'[cobalt] Bad status from {instance}: {status} | {data}')
-        except Exception as e:
-            print(f'[cobalt] Error with {instance}: {e}')
+            dl_path = stream.download(output_path=tmp_dir, filename='video.mp4')
+            if dl_path and os.path.exists(dl_path) and os.path.getsize(dl_path) > 0:
+                shutil.move(dl_path, output_path)
+                print(f'[pytubefix] Success! {os.path.getsize(output_path)//1024} KB')
+                return True
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+    except Exception as e:
+        print(f'[pytubefix] Error: {e}')
     return False
 
 
@@ -237,6 +289,9 @@ def download_via_invidious(url, output_path):
         'https://invidious.privacydev.net',
         'https://iv.datura.network',
         'https://invidious.projectsegfau.lt',
+        'https://yt.cdaut.de',
+        'https://invidious.nerdvpn.de',
+        'https://vid.puffyan.us',
     ]
     for instance in instances:
         try:
@@ -490,12 +545,17 @@ def clip_youtube_video():
         # ── Method A: cobalt.tools (best — no IP restrictions) ──────────────
         dl_success = download_via_cobalt(url, raw_download_path)
 
-        # ── Method B: Invidious API (fallback) ───────────────────────────────
+        # ── Method B: pytubefix (different request path — bypasses SSL block) ─
         if not dl_success:
-            print('[download] cobalt failed, trying Invidious ...')
+            print('[download] cobalt failed, trying pytubefix ...')
+            dl_success = download_via_pytubefix(url, raw_download_path)
+
+        # ── Method C: Invidious API (proxy fallback) ─────────────────────────
+        if not dl_success:
+            print('[download] pytubefix failed, trying Invidious ...')
             dl_success = download_via_invidious(url, raw_download_path)
 
-        # ── Method C: yt-dlp with cookies (last resort) ──────────────────────
+        # ── Method D: yt-dlp with cookies (last resort) ──────────────────────
         if not dl_success:
             print('[download] Invidious failed, trying yt-dlp with cookies ...')
             ytdlp_bin = get_pip_binary('yt-dlp')

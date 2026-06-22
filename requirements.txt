@@ -8,3 +8,4 @@ Pillow>=10.0.0
 requests
 gunicorn
 curl-cffi>=0.7.0
+pytubefix>=9.0.0
