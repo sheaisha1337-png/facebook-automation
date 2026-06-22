@@ -183,13 +183,13 @@ def _extract_video_id(url):
 def download_via_cobalt(url, output_path):
     """
     Download via cobalt.tools API — works from datacenter IPs.
-    Tries multiple public cobalt instances with both old and new API formats.
+    Tries public cobalt instances with both old and new API formats.
     """
     import requests as _req
+    # Only try top 2 instances to save time
     instances = [
         'https://api.cobalt.tools',
         'https://cobalt.api.timelessnesses.me',
-        'https://cobalt.tools.nadeko.net',
     ]
     # Try both v7 (new) and v6 (old) payload formats
     payloads = [
@@ -214,7 +214,7 @@ def download_via_cobalt(url, output_path):
         for payload in payloads:
             try:
                 print(f'[cobalt] Trying {instance} ...')
-                resp = _req.post(f'{instance}/', json=payload, headers=headers, timeout=20)
+                resp = _req.post(f'{instance}/', json=payload, headers=headers, timeout=4)
                 if resp.status_code not in (200, 201):
                     print(f'[cobalt] {instance} returned HTTP {resp.status_code}')
                     break  # try next instance, not next payload
@@ -247,13 +247,15 @@ def download_via_pytubefix(url, output_path):
     and often works from datacenter IPs where yt-dlp SSL-fails.
     """
     try:
+        import socket
+        # Set a tight socket timeout to prevent pytubefix from hanging the request
+        socket.setdefaulttimeout(5)
+        
         from pytubefix import YouTube
         from pytubefix.cli import on_progress
         
-        # Try multiple clients to find one that YouTube doesn't block or prompt on.
-        # 'WEB' triggers node-based signature generation if node is available.
-        # 'ANDROID' is the mobile client.
-        clients = ['WEB', 'ANDROID', 'ANDROID_VR']
+        # Try WEB and ANDROID client modes (WEB triggers Node-based PO generation)
+        clients = ['WEB', 'ANDROID']
         
         for client in clients:
             try:
@@ -341,12 +343,13 @@ def download_via_invidious(url, output_path):
     except Exception as api_err:
         print(f'[invidious] Failed to fetch live instances: {api_err}. Using defaults.')
 
-    for instance in instances:
+    # Try at most 2 instances to keep latency under 6 seconds
+    for instance in instances[:2]:
         instance = instance.rstrip('/')
         try:
             print(f'[invidious] Querying {instance} for {vid_id} ...')
             api = f'{instance}/api/v1/videos/{vid_id}?fields=formatStreams'
-            resp = _req.get(api, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
+            resp = _req.get(api, timeout=3, headers={'User-Agent': 'Mozilla/5.0'})
             if resp.status_code != 200:
                 print(f'[invidious] {instance} returned HTTP {resp.status_code}')
                 continue
@@ -629,18 +632,16 @@ def clip_youtube_video():
             yt_proxy    = os.environ.get('YT_PROXY', '')
 
             attempts = []
-            if has_cookies:
-                if has_curl_cffi:
-                    attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
-                                     'quality': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best', 'timeout': 90})
-                attempts.append({'impersonate': None, 'player_client': 'default,-tv',
-                                 'quality': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best', 'timeout': 90})
+            if has_curl_cffi:
+                # Impersonate chrome to bypass TLS fingerprint blocking
+                quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best'
+                attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
+                                 'quality': quality, 'timeout': 25})
             else:
-                if has_curl_cffi:
-                    attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
-                                     'quality': 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best', 'timeout': 60})
+                # Fallback if curl-cffi is not available
+                quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'worst[ext=mp4]/worst'
                 attempts.append({'impersonate': None, 'player_client': 'default,-tv',
-                                 'quality': 'worst[ext=mp4]/worst', 'timeout': 60})
+                                 'quality': quality, 'timeout': 25})
 
             stderr_text = ''
             attempt_errors = []
