@@ -643,6 +643,7 @@ def clip_youtube_video():
                                  'quality': 'worst[ext=mp4]/worst', 'timeout': 60})
 
             stderr_text = ''
+            attempt_errors = []
             for idx, attempt in enumerate(attempts, 1):
                 for path in [raw_download_path, raw_download_path + '.part']:
                     if os.path.exists(path):
@@ -661,25 +662,36 @@ def clip_youtube_video():
                 cmd.append(url)
 
                 try:
+                    print(f"[yt-dlp] Running attempt {idx} (impersonate={attempt['impersonate']}, client={attempt['player_client']})")
                     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=attempt['timeout'])
-                    stderr_text = res.stderr.decode('utf-8', errors='ignore')
+                    err = res.stderr.decode('utf-8', errors='ignore')
+                    print(f"[yt-dlp] Attempt {idx} finished with return code {res.returncode}")
                     if res.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
                         dl_success = True
                         print(f'[yt-dlp] Succeeded on attempt {idx}')
                         break
-                    if any(k in stderr_text for k in ['Sign in', 'bot', 'Private', 'members-only']):
+                    
+                    attempt_errors.append(f"Attempt {idx} (impersonate={attempt['impersonate']}): {err.strip()[-300:]}")
+                    stderr_text = err
+                    
+                    # If we got a bot/sign-in message, cookies might be bad or missing. Don't continue to avoid lockout.
+                    if any(k in err for k in ['Sign in', 'bot', 'Private', 'members-only']):
+                        print(f"[yt-dlp] Aborting attempts due to bot/auth detection on attempt {idx}")
                         break
                 except subprocess.TimeoutExpired:
+                    print(f"[yt-dlp] Attempt {idx} timed out.")
+                    attempt_errors.append(f"Attempt {idx} timed out.")
                     stderr_text = 'Download timed out.'
                 except Exception as e:
                     print(f"[yt-dlp] Attempt {idx} exception: {e}")
+                    attempt_errors.append(f"Attempt {idx} exception: {e}")
                     stderr_text = str(e)
                     continue
 
         if not dl_success:
-            raw_err = stderr_text[-600:].strip() if stderr_text else 'All download methods failed'
+            details = " | ".join(attempt_errors) if attempt_errors else (stderr_text[-600:].strip() if stderr_text else 'All download methods failed')
             return jsonify({'success': False,
-                            'error': f'Download failed — tried cobalt, pytubefix, invidious, yt-dlp+cookies. Detail: {raw_err}'}), 500
+                            'error': f'Download failed — tried cobalt, pytubefix, invidious, yt-dlp+cookies. Details: {details}'}), 500
 
 
             
