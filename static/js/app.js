@@ -370,6 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     $('refresh-gallery')?.addEventListener('click', loadGallery);
+    $('download-all-btn')?.addEventListener('click', () => {
+        window.location.href = '/api/download-all';
+    });
     $('clear-library-btn')?.addEventListener('click', clearLibrary);
     $('library-search')?.addEventListener('input', loadGallery);
 

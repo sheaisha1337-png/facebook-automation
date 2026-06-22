@@ -2,6 +2,15 @@ import os
 import subprocess
 import tempfile
 
+def _parse_bool(val, default=False):
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ("true", "1", "yes", "on")
+    return bool(val)
+
 def crop_to_aspect_ratio(clip, target_w, target_h):
     """
     Crops a video clip from its center to match the target aspect ratio,
@@ -137,29 +146,24 @@ def apply_copyright_filters(input_path, output_path, options):
     """
     Applies visual and audio transformations to bypass copyright filters.
     Uses pure FFmpeg subprocess for reliability — no moviepy silent failures.
-
-    Filters applied:
-    - Aspect Ratio (vertical 9:16, horizontal 16:9, or original)
-    - Horizontal mirror (hflip)
-    - 5% center zoom-in (crop + scale)
-    - Speed adjustment (setpts + atempo)
-    - Audio pitch shift (asetrate + atempo correction)
     """
-    aspect       = options.get("aspect_ratio", "original")
-    do_mirror    = options.get("mirror", True)
-    do_zoom      = options.get("zoom", True)
-    speed_factor = float(options.get("speed", 1.04))
-    pitch_semi   = float(options.get("pitch_shift", 0.8))
+    aspect        = options.get("aspect_ratio", "original")
+    mirror_mode   = options.get("mirror_mode", "horizontal")
+    color_filter  = options.get("color_filter", "cinematic")
+    do_zoom       = _parse_bool(options.get("zoom"), True)
+    vignette      = _parse_bool(options.get("vignette"), False)
+    noise_grain   = _parse_bool(options.get("noise_grain"), False)
+    text_overlay  = options.get("text_overlay", "")
+    subtitle_path = options.get("subtitle_file_path")
 
-    border_color = options.get("border_color", "none")
+    speed_factor  = float(options.get("speed", 1.04))
+    pitch_semi    = float(options.get("pitch_shift", 0.8))
+
+    border_color  = options.get("border_color", "none")
     try:
         border_width = int(options.get("border_width", 0))
     except ValueError:
         border_width = 0
-    text_overlay = options.get("text_overlay", "")
-    color_shift  = options.get("color_shift", False)
-    if isinstance(color_shift, str):
-        color_shift = color_shift.lower() == "true"
 
     # ── Check if the source has an audio stream ──────────────────────
     probe = subprocess.run(
@@ -185,17 +189,52 @@ def apply_copyright_filters(input_path, output_path, options):
         # Pad with border color
         vf.append(f"pad=iw+2*{border_width}:ih+2*{border_width}:{border_width}:{border_width}:color={border_color}")
 
-    if do_mirror:
+    # Flip Mode
+    if mirror_mode == "horizontal":
         vf.append("hflip")
+    elif mirror_mode == "vertical":
+        vf.append("vflip")
+    elif mirror_mode == "both":
+        vf.append("hflip,vflip")
 
     if do_zoom:
         # Scale up 5%, then crop center back to original size
         vf.append("scale=iw*1.05:ih*1.05,crop=iw/1.05:ih/1.05")
 
-    if color_shift:
-        # Slightly shift color metrics
-        vf.append("eq=contrast=1.03:brightness=0.02:saturation=1.08")
+    # Color Grading Filters
+    if color_filter == "cinematic":
+        vf.append("eq=contrast=1.15:brightness=0.03:saturation=1.2")
+    elif color_filter == "vibrant":
+        vf.append("eq=saturation=1.35:contrast=1.05")
+    elif color_filter == "beautify":
+        vf.append("eq=brightness=0.05:contrast=1.05:saturation=1.15,unsharp=3:3:0.5:3:3:0.5")
+    elif color_filter == "warm":
+        vf.append("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131:0")
+    elif color_filter == "cool":
+        vf.append("colorchannelmixer=.3:.3:.3:0:.3:.3:.3:0:.8:.8:.8:0")
+    elif color_filter == "vintage":
+        vf.append("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131:0")
+    elif color_filter == "grayscale":
+        vf.append("colorchannelmixer=.3:.59:.11:0:.3:.59:.11:0:.3:.59:.11:0")
+    elif color_filter == "dramatic":
+        vf.append("eq=contrast=1.3:brightness=-0.02:saturation=0.6")
+    elif color_filter == "faded":
+        vf.append("eq=contrast=0.85:brightness=0.08:saturation=0.9")
 
+    # Vignette
+    if vignette:
+        vf.append("vignette=pi/5")
+
+    # Noise/Grain
+    if noise_grain:
+        vf.append("noise=alls=3:allf=t")
+
+    # Burn subtitles if present
+    if subtitle_path and os.path.exists(subtitle_path):
+        escaped_sub_path = subtitle_path.replace("'", "'\\''").replace(":", "\\:")
+        vf.append(f"subtitles='{escaped_sub_path}':force_style='FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1'")
+
+    # Text Overlay
     if text_overlay:
         # Check if drawtext filter is available in the host FFmpeg build
         drawtext_available = False
@@ -213,18 +252,27 @@ def apply_copyright_filters(input_path, output_path, options):
             clean_text = clean_text.replace("'", "'\\''").replace(":", "\\:")
             
             # Resolve standard font paths for macOS/Linux compatibility
-            font_paths = [
-                "/System/Library/Fonts/Helvetica.ttc",
-                "/Library/Fonts/Arial.ttf",
-                "/System/Library/Fonts/Supplemental/Arial.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-            ]
+            import glob
             fontfile_param = ""
-            for p in font_paths:
-                if os.path.exists(p):
-                    fontfile_param = f":fontfile='{p}'"
-                    break
+            # Search recursively in Linux standard font directory
+            linux_fonts = glob.glob("/usr/share/fonts/**/*.ttf", recursive=True) + \
+                          glob.glob("/usr/share/fonts/**/*.ttc", recursive=True)
+            if linux_fonts:
+                escaped_p = linux_fonts[0].replace("'", "'\\''").replace(":", "\\:")
+                fontfile_param = f":fontfile='{escaped_p}'"
+            else:
+                font_paths = [
+                    "/System/Library/Fonts/Helvetica.ttc",
+                    "/Library/Fonts/Arial.ttf",
+                    "/System/Library/Fonts/Supplemental/Arial.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+                ]
+                for p in font_paths:
+                    if os.path.exists(p):
+                        escaped_p = p.replace("'", "'\\''").replace(":", "\\:")
+                        fontfile_param = f":fontfile='{escaped_p}'"
+                        break
             vf.append(f"drawtext=text='{clean_text}'{fontfile_param}:x=(w-text_w)/2:y=100:fontsize=36:fontcolor=white:box=1:boxcolor=black@0.4:boxborderw=6")
         else:
             print("[video_effects] Warning: 'drawtext' filter is not supported by this FFmpeg build. Skipping text overlay.")

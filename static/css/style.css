@@ -996,6 +996,12 @@ body.light-theme .library-action-btn {
     border-color: rgba(244, 63, 94, 0.3);
 }
 
+.zip-btn:hover {
+    color: var(--success);
+    background: var(--success-light);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
 .refresh-btn:hover svg {
     transform: rotate(180deg);
     transition: transform 0.5s ease;

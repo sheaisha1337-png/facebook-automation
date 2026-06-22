@@ -556,6 +556,63 @@ def merge_videos():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def download_youtube_subtitles(url, lang, job_id):
+    """
+    Downloads subtitles or auto-generated subtitles for a YouTube video using yt-dlp.
+    Respects rate limits by employing cookies, proxy, and user impersonation.
+    """
+    ytdlp_bin = get_pip_binary('yt-dlp')
+    has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
+    yt_proxy = os.environ.get('YT_PROXY', '')
+    
+    try:
+        import curl_cffi
+        has_curl_cffi = True
+    except ImportError:
+        has_curl_cffi = False
+
+    output_template = os.path.join(UPLOAD_FOLDER, f"{job_id}_subs")
+    
+    cmd = [
+        ytdlp_bin, '--skip-download',
+        '--write-subs', '--write-auto-subs',
+        '--sub-format', 'srt',
+        '--sub-langs', lang,
+        '--geo-bypass', '--no-check-certificates', '-4',
+        '--socket-timeout', '15', '--retries', '1',
+        '-o', f"{output_template}.%(ext)s"
+    ]
+    
+    if has_cookies:
+        cmd.extend(['--cookies', COOKIES_FILE_PATH])
+    if yt_proxy:
+        cmd.extend(['--proxy', yt_proxy])
+    if has_curl_cffi:
+        cmd.extend(['--impersonate', 'chrome'])
+        cmd.extend(['--extractor-args', 'youtube:player_client=ios,android,web'])
+    else:
+        cmd.extend(['--extractor-args', 'youtube:player_client=default,-tv'])
+        
+    cmd.append(url)
+    
+    print(f"[subtitles] Requesting subtitles ({lang}) for {url} ...")
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
+        print(f"[subtitles] yt-dlp exit status: {res.returncode}")
+        
+        # Look for matching srt file in UPLOAD_FOLDER
+        import glob
+        matches = glob.glob(os.path.join(UPLOAD_FOLDER, f"{job_id}_subs.*.srt"))
+        if matches:
+            print(f"[subtitles] Found downloaded subtitles: {matches[0]}")
+            return matches[0]
+        else:
+            stderr_out = res.stderr.decode('utf-8', errors='ignore')[-300:]
+            print(f"[subtitles] Subtitle download returned no srt file. Stderr: {stderr_out}")
+    except Exception as e:
+        print(f"[subtitles] Exception during subtitle download: {e}")
+    return None
+
 @app.route('/api/clip', methods=['POST'])
 def clip_youtube_video():
     """
@@ -578,19 +635,29 @@ def clip_youtube_video():
         except ValueError:
             b_width = 0
             
+        job_id = str(uuid.uuid4())
+        
+        # Subtitle Handling
+        caption_lang = request.form.get('caption_lang', 'none')
+        subtitle_file_path = None
+        if caption_lang != 'none' and url:
+            subtitle_file_path = download_youtube_subtitles(url, caption_lang, job_id)
+            
         filters = {
             'aspect_ratio': request.form.get('aspect_ratio', 'original'),
-            'mirror': request.form.get('mirror', 'true') == 'true',
+            'mirror_mode': request.form.get('mirror_mode', 'none'),
             'zoom': request.form.get('zoom', 'true') == 'true',
+            'color_filter': request.form.get('color_filter', 'none'),
+            'vignette': request.form.get('vignette', 'false') == 'true',
+            'noise_grain': request.form.get('noise_grain', 'false') == 'true',
             'speed': float(request.form.get('speed', 1.04)),
             'pitch_shift': float(request.form.get('pitch_shift', 0.8)),
             'border_color': request.form.get('border_color', 'none'),
             'border_width': b_width,
             'text_overlay': request.form.get('text_overlay', ''),
-            'color_shift': request.form.get('color_shift', 'false') == 'true'
+            'subtitle_file_path': subtitle_file_path
         }
         
-        job_id = str(uuid.uuid4())
         raw_download_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_raw.mp4")
         
         dl_success = False
@@ -735,13 +802,19 @@ def clip_youtube_video():
             if os.path.exists(out_path):
                 processed_files.append(out_filename)
                 
-        # Cleanup raw downloaded file & sliced folder
+        # Cleanup raw downloaded file & sliced folder & subtitles
         if os.path.exists(raw_download_path):
             os.remove(raw_download_path)
             
         import shutil
         if os.path.exists(temp_clips_dir):
             shutil.rmtree(temp_clips_dir)
+            
+        if subtitle_file_path and os.path.exists(subtitle_file_path):
+            try:
+                os.remove(subtitle_file_path)
+            except Exception:
+                pass
             
         return jsonify({
             'success': True,
@@ -750,6 +823,18 @@ def clip_youtube_video():
         })
         
     except Exception as e:
+        import shutil
+        # Cleanup files in case of error
+        if 'raw_download_path' in locals() and os.path.exists(raw_download_path):
+            try: os.remove(raw_download_path)
+            except Exception: pass
+        if 'temp_clips_dir' in locals() and os.path.exists(temp_clips_dir):
+            try: shutil.rmtree(temp_clips_dir)
+            except Exception: pass
+        if 'subtitle_file_path' in locals() and subtitle_file_path and os.path.exists(subtitle_file_path):
+            try: os.remove(subtitle_file_path)
+            except Exception: pass
+            
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -854,6 +939,42 @@ def generate_video():
 def download_file(filename):
     """Serves file from outputs folder."""
     return send_from_directory(OUTPUT_FOLDER, filename)
+
+
+@app.route('/api/download-all', methods=['GET'])
+def download_all():
+    """
+    ZIP all exported MP4 clips in the outputs directory and return as a single download.
+    """
+    import zipfile
+    import io
+    from flask import send_file
+    from datetime import datetime
+
+    try:
+        # Create in-memory zip
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for f in os.listdir(OUTPUT_FOLDER):
+                # skip temp / partial files
+                if f.endswith('.mp4') and not any(pat in f for pat in ['.temp', 'TEMP_MPY', '.part', '.tmp']):
+                    path = os.path.join(OUTPUT_FOLDER, f)
+                    if os.path.exists(path) and os.path.getsize(path) > 0:
+                        zip_file.write(path, f)
+                        
+        zip_buffer.seek(0)
+        
+        zip_filename = f"exported_clips_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=zip_filename
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f"Failed to zip files: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
