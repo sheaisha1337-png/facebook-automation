@@ -151,11 +151,130 @@ def debug_info():
 
 # Helper to execute shell commands (e.g. yt-dlp using local venv)
 def get_pip_binary(binary_name):
-    # Returns path to binary in virtual env
     venv_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'venv', 'bin', binary_name)
     if os.path.exists(venv_bin):
         return venv_bin
     return binary_name
+
+
+def _extract_video_id(url):
+    """Extract YouTube video ID from any YouTube URL format."""
+    import re
+    patterns = [
+        r'(?:v=|youtu\.be/|/embed/|/v/|/shorts/)([A-Za-z0-9_-]{11})',
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return m.group(1)
+    return None
+
+
+def download_via_cobalt(url, output_path):
+    """
+    Download via cobalt.tools API — works from datacenter IPs.
+    Tries multiple public cobalt instances.
+    """
+    import requests as _req
+    instances = [
+        'https://api.cobalt.tools',
+        'https://cobalt.api.timelessnesses.me',
+        'https://cobalt.tools.nadeko.net',
+    ]
+    headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'url': url,
+        'vQuality': '720',
+        'filenamePattern': 'basic',
+        'isAudioOnly': False,
+        'disableMetadata': True,
+    }
+    for instance in instances:
+        try:
+            print(f'[cobalt] Trying {instance} ...')
+            resp = _req.post(f'{instance}/', json=payload, headers=headers, timeout=20)
+            if resp.status_code != 200:
+                print(f'[cobalt] {instance} returned HTTP {resp.status_code}')
+                continue
+            data = resp.json()
+            status = data.get('status', '')
+            dl_url = data.get('url', '')
+            if status in ('stream', 'tunnel', 'redirect', 'local') and dl_url:
+                print(f'[cobalt] Got URL ({status}), downloading ...')
+                with _req.get(dl_url, stream=True, timeout=300,
+                              headers={'User-Agent': 'Mozilla/5.0'}) as r:
+                    r.raise_for_status()
+                    with open(output_path, 'wb') as f:
+                        for chunk in r.iter_content(65536):
+                            f.write(chunk)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    print(f'[cobalt] Success! {os.path.getsize(output_path)//1024} KB')
+                    return True
+            else:
+                print(f'[cobalt] Bad status from {instance}: {status} | {data}')
+        except Exception as e:
+            print(f'[cobalt] Error with {instance}: {e}')
+    return False
+
+
+def download_via_invidious(url, output_path):
+    """
+    Download via public Invidious instances — these proxy YouTube traffic
+    and are not datacenter-blocked.
+    """
+    import requests as _req
+    vid_id = _extract_video_id(url)
+    if not vid_id:
+        print('[invidious] Could not extract video ID')
+        return False
+
+    instances = [
+        'https://inv.nadeko.net',
+        'https://invidious.fdn.fr',
+        'https://invidious.privacydev.net',
+        'https://iv.datura.network',
+        'https://invidious.projectsegfau.lt',
+    ]
+    for instance in instances:
+        try:
+            print(f'[invidious] Querying {instance} for {vid_id} ...')
+            api = f'{instance}/api/v1/videos/{vid_id}?fields=formatStreams'
+            resp = _req.get(api, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
+            if resp.status_code != 200:
+                print(f'[invidious] {instance} returned HTTP {resp.status_code}')
+                continue
+            streams = resp.json().get('formatStreams', [])
+            # Pick best MP4 at or below 720p
+            best = None
+            for s in streams:
+                if s.get('container') == 'mp4':
+                    try:
+                        q = int(s.get('qualityLabel', '0p').replace('p', '').split()[0])
+                    except Exception:
+                        q = 0
+                    if q <= 720:
+                        if best is None or q > int(best.get('qualityLabel', '0p').replace('p', '').split()[0]):
+                            best = s
+            if best and best.get('url'):
+                stream_url = best['url']
+                print(f'[invidious] Downloading {best.get("qualityLabel")} from {instance} ...')
+                with _req.get(stream_url, stream=True, timeout=300,
+                              headers={'User-Agent': 'Mozilla/5.0'}) as r:
+                    r.raise_for_status()
+                    with open(output_path, 'wb') as f:
+                        for chunk in r.iter_content(65536):
+                            f.write(chunk)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    print(f'[invidious] Success! {os.path.getsize(output_path)//1024} KB')
+                    return True
+            else:
+                print(f'[invidious] No suitable MP4 stream found on {instance}')
+        except Exception as e:
+            print(f'[invidious] Error with {instance}: {e}')
+    return False
 
 @app.route('/')
 def index():
@@ -365,146 +484,82 @@ def clip_youtube_video():
         job_id = str(uuid.uuid4())
         raw_download_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_raw.mp4")
         
-        # 1. Download YouTube Video using yt-dlp
-        ytdlp_bin = get_pip_binary('yt-dlp')
-        
-        print(f"Downloading video from {url}...")
+        # 1. Download YouTube Video — try cobalt/invidious first (bypass datacenter block)
+        print(f'[download] Starting download for {url}')
 
-        # Check if curl-cffi is available for --impersonate support
-        try:
-            import curl_cffi
-            has_curl_cffi = True
-        except ImportError:
-            has_curl_cffi = False
+        # ── Method A: cobalt.tools (best — no IP restrictions) ──────────────
+        dl_success = download_via_cobalt(url, raw_download_path)
 
-        # Check cookies availability upfront
-        has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
-        yt_proxy = os.environ.get('YT_PROXY', '')
+        # ── Method B: Invidious API (fallback) ───────────────────────────────
+        if not dl_success:
+            print('[download] cobalt failed, trying Invidious ...')
+            dl_success = download_via_invidious(url, raw_download_path)
 
-        # Build streamlined attempt strategies — cookies-first, fail fast
-        attempts = []
-
-        if has_cookies:
-            # Strategy 1 (BEST): cookies + impersonate chrome (fastest bypass)
-            if has_curl_cffi:
-                attempts.append({
-                    "impersonate": "chrome",
-                    "player_client": "ios,android,web",
-                    "quality": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best",
-                    "timeout": 120
-                })
-            # Strategy 2: cookies + no impersonate + default client
-            attempts.append({
-                "impersonate": None,
-                "player_client": "default,-tv",
-                "quality": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best",
-                "timeout": 120
-            })
-        else:
-            # No cookies — try impersonate first, then plain fallbacks
-            if has_curl_cffi:
-                attempts.append({
-                    "impersonate": "chrome",
-                    "player_client": "ios,android,web",
-                    "quality": "bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best",
-                    "timeout": 90
-                })
-            attempts.append({
-                "impersonate": None,
-                "player_client": "default,-tv",
-                "quality": "bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best",
-                "timeout": 90
-            })
-            # Last resort: lowest quality, default client
-            attempts.append({
-                "impersonate": None,
-                "player_client": None,
-                "quality": "worst[ext=mp4]/worst",
-                "timeout": 60
-            })
-
-        success = False
-        stderr_text = ""
-
-        for idx, attempt in enumerate(attempts, 1):
-            print(f"[yt-dlp] Attempt {idx}/{len(attempts)}: impersonate={attempt['impersonate']}, player_client={attempt['player_client']}, timeout={attempt['timeout']}s")
-
-            # Clean up any partial files from previous attempt
-            for path in [raw_download_path, raw_download_path + ".part"]:
-                if os.path.exists(path):
-                    try:
-                        os.remove(path)
-                    except Exception:
-                        pass
-
-            cmd = [
-                ytdlp_bin,
-                "-f", attempt["quality"],
-                "--merge-output-format", "mp4",
-                "--geo-bypass",
-                "--no-check-certificates",
-                "-4",                        # force IPv4 (IPv6 ranges are more aggressively blocked)
-                "--socket-timeout", "15",
-                "--retries", "1",
-                "--fragment-retries", "2",
-                "-o", raw_download_path
-            ]
-
-            if has_cookies:
-                cmd.extend(["--cookies", COOKIES_FILE_PATH])
-
-            if yt_proxy:
-                cmd.extend(["--proxy", yt_proxy])
-
-            if attempt["impersonate"]:
-                cmd.extend(["--impersonate", attempt["impersonate"]])
-
-            if attempt["player_client"]:
-                cmd.extend(["--extractor-args", f"youtube:player_client={attempt['player_client']}"])
-
-            cmd.append(url)
-
+        # ── Method C: yt-dlp with cookies (last resort) ──────────────────────
+        if not dl_success:
+            print('[download] Invidious failed, trying yt-dlp with cookies ...')
+            ytdlp_bin = get_pip_binary('yt-dlp')
             try:
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=attempt["timeout"])
-                stderr_text = result.stderr.decode('utf-8', errors='ignore')
+                import curl_cffi
+                has_curl_cffi = True
+            except ImportError:
+                has_curl_cffi = False
 
-                if result.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
-                    success = True
-                    print(f"[yt-dlp] Download succeeded on attempt {idx}!")
-                    break
-                else:
-                    print(f"[yt-dlp] Attempt {idx} failed (rc={result.returncode}). Error: {stderr_text[-200:]}")
-                    # If it is a clear block (bot/sign-in), no point retrying
-                    if any(kw in stderr_text for kw in ['Sign in', 'bot', 'Private', 'members-only', 'removed', 'not available']):
-                        print("[yt-dlp] Hard block detected — stopping retries early.")
-                        break
-            except subprocess.TimeoutExpired:
-                print(f"[yt-dlp] Attempt {idx} timed out after {attempt['timeout']}s.")
-                stderr_text = "Download timed out."
-                continue
-            except Exception as e:
-                print(f"[yt-dlp] Attempt {idx} exception: {e}")
-                stderr_text = str(e)
-                continue
+            has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
+            yt_proxy    = os.environ.get('YT_PROXY', '')
 
-        if not success:
-            # Always include the real yt-dlp output so bugs can be diagnosed
-            raw_err = stderr_text[-600:].strip() if stderr_text else 'No output'
-            if 'impersonate' in stderr_text.lower() or ('curl' in stderr_text.lower() and 'cffi' in stderr_text.lower()):
-                err = f'Browser impersonation library issue. Detail: {raw_err}'
-            elif 'Sign in' in stderr_text or 'confirm' in stderr_text.lower():
-                err = f'YouTube requires sign-in / bot check. Cookies may be expired or missing. Detail: {raw_err}'
-            elif 'Private' in stderr_text or 'members-only' in stderr_text:
-                err = f'This video is private or members-only. Detail: {raw_err}'
-            elif 'removed' in stderr_text or 'unavailable' in stderr_text or 'not available' in stderr_text:
-                err = f'Video unavailable or removed. Detail: {raw_err}'
-            elif 'bot' in stderr_text.lower() or 'detected' in stderr_text.lower():
-                err = f'YouTube bot detection triggered. Detail: {raw_err}'
-            elif 'SSL' in stderr_text or 'EOF' in stderr_text or 'timed out' in stderr_text.lower():
-                err = f'SSL/Connection error (YouTube blocks hosting server IPs). Add/refresh cookies. Detail: {raw_err}'
+            attempts = []
+            if has_cookies:
+                if has_curl_cffi:
+                    attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
+                                     'quality': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best', 'timeout': 90})
+                attempts.append({'impersonate': None, 'player_client': 'default,-tv',
+                                 'quality': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best', 'timeout': 90})
             else:
-                err = f'yt-dlp error: {raw_err}'
-            return jsonify({'success': False, 'error': f'Download failed: {err}'}), 500
+                if has_curl_cffi:
+                    attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
+                                     'quality': 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best', 'timeout': 60})
+                attempts.append({'impersonate': None, 'player_client': 'default,-tv',
+                                 'quality': 'worst[ext=mp4]/worst', 'timeout': 60})
+
+            stderr_text = ''
+            for idx, attempt in enumerate(attempts, 1):
+                for path in [raw_download_path, raw_download_path + '.part']:
+                    if os.path.exists(path):
+                        try: os.remove(path)
+                        except Exception: pass
+
+                cmd = [ytdlp_bin, '-f', attempt['quality'], '--merge-output-format', 'mp4',
+                       '--geo-bypass', '--no-check-certificates', '-4',
+                       '--socket-timeout', '15', '--retries', '1', '--fragment-retries', '2',
+                       '-o', raw_download_path]
+
+                if has_cookies: cmd.extend(['--cookies', COOKIES_FILE_PATH])
+                if yt_proxy:    cmd.extend(['--proxy', yt_proxy])
+                if attempt['impersonate']:    cmd.extend(['--impersonate', attempt['impersonate']])
+                if attempt['player_client']:  cmd.extend(['--extractor-args', f"youtube:player_client={attempt['player_client']}"])
+                cmd.append(url)
+
+                try:
+                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=attempt['timeout'])
+                    stderr_text = res.stderr.decode('utf-8', errors='ignore')
+                    if res.returncode == 0 and os.path.exists(raw_download_path) and os.path.getsize(raw_download_path) > 0:
+                        dl_success = True
+                        print(f'[yt-dlp] Succeeded on attempt {idx}')
+                        break
+                    if any(k in stderr_text for k in ['Sign in', 'bot', 'Private', 'members-only']):
+                        break
+                except subprocess.TimeoutExpired:
+                    stderr_text = 'Download timed out.'
+                except Exception as e:
+                    print(f"[yt-dlp] Attempt {idx} exception: {e}")
+                    stderr_text = str(e)
+                    continue
+
+        if not dl_success:
+            raw_err = stderr_text[-600:].strip() if stderr_text else 'All download methods (cobalt, invidious, yt-dlp) failed'
+            return jsonify({'success': False,
+                            'error': f'Download failed — all methods exhausted. Detail: {raw_err}'}), 500
 
 
             
