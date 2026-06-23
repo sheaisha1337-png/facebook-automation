@@ -223,7 +223,7 @@ def apply_copyright_filters(input_path, output_path, options):
 
     # Vignette
     if vignette:
-        vf.append("vignette=pi/5")
+        vf.append("vignette=0.6283")
 
     # Noise/Grain
     if noise_grain:
