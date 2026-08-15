@@ -753,11 +753,16 @@ def clip_youtube_video():
             # YoutubeDL error. Multiple player clients keep the fallback resilient.
             quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best'
             attempts = [
-                {'impersonate': None, 'player_client': 'ios,android,web',
-                 'quality': quality, 'timeout': 35},
-                {'impersonate': None, 'player_client': 'default,-tv',
+                # Public videos often work better without stale account cookies.
+                {'impersonate': None, 'player_client': None, 'use_cookies': False,
+                 'quality': quality, 'timeout': 45},
+                {'impersonate': None, 'player_client': 'ios,android,web', 'use_cookies': True,
+                 'quality': quality, 'timeout': 45},
+                {'impersonate': None, 'player_client': 'web,mweb', 'use_cookies': False,
+                 'quality': 'bv*+ba/b', 'timeout': 45},
+                {'impersonate': None, 'player_client': 'default,-tv', 'use_cookies': True,
                  'quality': 'best[height<=480][ext=mp4]/best[height<=480]/worst',
-                 'timeout': 35},
+                 'timeout': 45},
             ]
 
             stderr_text = ''
@@ -774,7 +779,7 @@ def clip_youtube_video():
                        '--socket-timeout', '15', '--retries', '1', '--fragment-retries', '2',
                        '-o', raw_download_path]
 
-                if has_cookies: cmd.extend(['--cookies', COOKIES_FILE_PATH])
+                if has_cookies and attempt.get('use_cookies', True): cmd.extend(['--cookies', COOKIES_FILE_PATH])
                 if yt_proxy:    cmd.extend(['--proxy', yt_proxy])
                 if attempt['impersonate']:    cmd.extend(['--impersonate', attempt['impersonate']])
                 if attempt['player_client']:  cmd.extend(['--extractor-args', f"youtube:player_client={attempt['player_client']}"])
