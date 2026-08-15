@@ -33,7 +33,13 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 # IMPORTANT: Store in app root, NOT uploads/, so the cleanup thread never deletes it
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 COOKIES_FILE_PATH = os.path.join(APP_ROOT, 'yt_cookies.txt')
+RENDER_COOKIES_FILE = '/etc/secrets/yt_cookies.txt'
 yt_cookies_content = os.environ.get('YT_COOKIES')
+if os.path.isfile(RENDER_COOKIES_FILE):
+    COOKIES_FILE_PATH = RENDER_COOKIES_FILE
+    yt_cookies_content = None
+    print(f'[startup] Using Render secret cookie file → {COOKIES_FILE_PATH}')
+
 if yt_cookies_content:
     try:
         import json as _json
@@ -70,8 +76,8 @@ if yt_cookies_content:
         print(f'[startup] cookies written → {COOKIES_FILE_PATH} ({os.path.getsize(COOKIES_FILE_PATH)} bytes)')
     except Exception as _e:
         print(f'[startup] Failed to write cookies: {_e}')
-else:
-    print('[startup] No YT_COOKIES env var found — downloads will run without cookies.')
+elif not os.path.isfile(COOKIES_FILE_PATH):
+    print('[startup] No cookie secret found — downloads will run without cookies.')
 
 # ── Background Cleanup Thread (30-minute expiration) ──
 def start_cleanup_thread():
