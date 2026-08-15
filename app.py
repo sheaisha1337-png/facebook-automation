@@ -780,10 +780,11 @@ def clip_youtube_video():
                     attempt_errors.append(f"Attempt {idx} (impersonate={attempt['impersonate']}): {err.strip()[-300:]}")
                     stderr_text = err
                     
-                    # If we got a bot/sign-in message, cookies might be bad or missing. Don't continue to avoid lockout.
+                    # A player client may be blocked while another still works; keep trying
+                    # the remaining strategies instead of aborting the whole chain.
                     if any(k in err for k in ['Sign in', 'bot', 'Private', 'members-only']):
-                        print(f"[yt-dlp] Aborting attempts due to bot/auth detection on attempt {idx}")
-                        break
+                        print(f"[yt-dlp] Auth/bot restriction on attempt {idx}; trying next client.")
+                        continue
                 except subprocess.TimeoutExpired:
                     print(f"[yt-dlp] Attempt {idx} timed out.")
                     attempt_errors.append(f"Attempt {idx} timed out.")
@@ -796,8 +797,13 @@ def clip_youtube_video():
 
         if not dl_success:
             details = " | ".join(attempt_errors) if attempt_errors else (stderr_text[-600:].strip() if stderr_text else 'All download methods failed')
-            return jsonify({'success': False,
-                            'error': f'Download failed — tried cobalt, pytubefix, invidious, yt-dlp+cookies. Details: {details}'}), 500
+            if not has_cookies and any(k in details for k in ['Sign in', 'bot', 'authentication']):
+                friendly = ('YouTube blocked this Render server and requires authenticated cookies. '
+                            'Add YT_COOKIES in Render Environment, or use Upload File. '
+                            'All cookie-free download strategies were attempted.')
+            else:
+                friendly = f'Download failed after all fallback methods. Details: {details}'
+            return jsonify({'success': False, 'error': friendly}), 500
 
 
             
