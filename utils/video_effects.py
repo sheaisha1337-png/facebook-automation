@@ -377,6 +377,11 @@ def slice_video(input_path, output_dir, mode="auto", intervals=8, custom_ranges=
             print(f"[slice_video] moviepy fallback also failed: {e}")
             raise RuntimeError("Could not determine video duration.")
     
+    # Defensive fallback: invalid/missing UI mode must never produce an empty job.
+    if mode not in ("auto", "timestamps"):
+        print(f"[slice_video] Invalid mode {mode!r}; falling back to auto.")
+        mode = "auto"
+
     slices = []
     if mode == "auto":
         start = 0
