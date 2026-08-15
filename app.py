@@ -769,6 +769,7 @@ def clip_youtube_video():
                         except Exception: pass
 
                 cmd = [ytdlp_bin, '-f', attempt['quality'], '--merge-output-format', 'mp4',
+                       '--js-runtimes', 'deno', '--remote-components', 'ejs:npm',
                        '--geo-bypass', '--no-check-certificates', '-4',
                        '--socket-timeout', '15', '--retries', '1', '--fragment-retries', '2',
                        '-o', raw_download_path]
