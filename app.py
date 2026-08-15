@@ -625,7 +625,7 @@ def clip_youtube_video():
         if not url and (not video_file or video_file.filename == ''):
             return jsonify({'success': False, 'error': 'YouTube URL or local video file upload is required.'}), 400
             
-        mode = request.form.get('mode', 'auto') # 'auto' or 'timestamps'
+        mode = request.form.get('slicing_method', request.form.get('mode', 'auto')) # 'auto' or 'timestamps'
         interval = int(request.form.get('interval', 8))
         timestamps_str = request.form.get('timestamps', '')
         
@@ -655,8 +655,12 @@ def clip_youtube_video():
             'border_color': request.form.get('border_color', 'none'),
             'border_width': b_width,
             'text_overlay': request.form.get('text_overlay', ''),
-            'subtitle_file_path': subtitle_file_path
+            'subtitle_file_path': subtitle_file_path,
+            'processing_profile': request.form.get('processing_profile', 'balanced'),
+            'fast_cut': request.form.get('fast_cut', 'false') == 'true',
+            'audio_copy': request.form.get('audio_copy', 'false') == 'true'
         }
+        parallel_processing = request.form.get('parallel_processing', 'false') == 'true'
         
         raw_download_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_raw.mp4")
         
@@ -793,14 +797,22 @@ def clip_youtube_video():
             return jsonify({'success': False, 'error': 'No clips generated during slicing.'}), 500
             
         # 3. Apply safety filters to each clip and save to outputs
-        processed_files = []
-        for idx, file_path in enumerate(sliced_files, 1):
+        def process_clip(item):
+            idx, file_path = item
             out_filename = f"clip_{job_id[:8]}_{idx}.mp4"
             out_path = os.path.join(OUTPUT_FOLDER, out_filename)
-            
+            print(f"[process] clip {idx}/{len(sliced_files)} profile={filters['processing_profile']}")
             apply_copyright_filters(file_path, out_path, filters)
-            if os.path.exists(out_path):
-                processed_files.append(out_filename)
+            return out_filename if os.path.exists(out_path) and os.path.getsize(out_path) > 0 else None
+
+        indexed_clips = list(enumerate(sliced_files, 1))
+        if parallel_processing and len(indexed_clips) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(2, len(indexed_clips))) as executor:
+                results = list(executor.map(process_clip, indexed_clips))
+        else:
+            results = [process_clip(item) for item in indexed_clips]
+        processed_files = [name for name in results if name]
                 
         # Cleanup raw downloaded file & sliced folder & subtitles
         if os.path.exists(raw_download_path):
