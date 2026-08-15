@@ -276,7 +276,7 @@ function initClipForm() {
 
         try {
             const fd  = new FormData(form);
-            const activeMethodBtn = $q('.segment-tab-btn.active');
+            const activeMethodBtn = $q('#clip-toggle-auto.active, #clip-toggle-ts.active');
             if (activeMethodBtn) {
                 fd.set('slicing_method', activeMethodBtn.dataset.type);
             }
