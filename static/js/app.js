@@ -195,40 +195,30 @@ function initAudioToggle() {
 
 function startProgress(fillId, pctId, stepId, steps, onDone) {
     const fill = $(fillId);
-    const pct  = $(pctId);
+    const pct = $(pctId);
     const step = $(stepId);
     if (!fill) return null;
-
-    let idx = 0;
-    let cur = 0;
-
-    const iv = setInterval(() => {
-        if (idx >= steps.length) { clearInterval(iv); onDone?.(); return; }
-        const { pct: target, label, dur } = steps[idx];
+    let idx = 0, cur = 0, cancelled = false;
+    const runStep = () => {
+        if (cancelled) return;
+        if (idx >= steps.length) { onDone?.(); return; }
+        const target = steps[idx].pct, label = steps[idx].label, dur = steps[idx].dur;
         step.textContent = label;
-
-        const speed = (target - cur) / (dur / 120);
-        const inner = setInterval(() => {
-            cur = Math.min(cur + speed, target);
-            fill.style.width = `${cur}%`;
-            pct.textContent  = `${Math.round(cur)}%`;
-            if (cur >= target) { clearInterval(inner); idx++; }
+        const startPct = cur, started = Date.now();
+        const timer = setInterval(() => {
+            const ratio = Math.min((Date.now() - started) / dur, 1);
+            cur = startPct + (target - startPct) * ratio;
+            fill.style.width = cur + "%";
+            pct.textContent = Math.round(cur) + "%";
+            if (ratio >= 1) { clearInterval(timer); idx += 1; runStep(); }
         }, 120);
-    }, 0);
-
-    return iv;
+    };
+    runStep();
+    return () => { cancelled = true; };
 }
 
-function showProgress(progressId) {
-    $(progressId)?.classList.add('visible');
-}
-function hideProgress(progressId) {
-    $(progressId)?.classList.remove('visible');
-}
-
-// ─────────────────────────────────────────────────────────────────
-// CLIP FORM SUBMISSION
-// ─────────────────────────────────────────────────────────────────
+function showProgress(progressId) { $(progressId)?.classList.add("visible"); }
+function hideProgress(progressId) { $(progressId)?.classList.remove("visible"); }
 function initClipForm() {
     const form = $('clip-form');
     if (!form) return;
@@ -272,12 +262,15 @@ function initClipForm() {
         btn.disabled = true; btn.classList.add('loading');
         showProgress('clip-progress');
 
+        const profile = $('processing_profile')?.value || 'balanced';
+        const profileLabel = { turbo: 'Turbo 720p', balanced: 'Balanced 1080p', quality: 'High Quality 1080p' }[profile];
+        const multiplier = { turbo: 0.65, balanced: 1, quality: 1.6 }[profile] || 1;
         const steps = [
-            { pct: 20, label: activeSource === 'youtube' ? '⬇️ Downloading video…' : '⬇️ Uploading video…', dur: 3000 },
-            { pct: 50, label: '✂️ Slicing into clips…',         dur: 2500 },
-            { pct: 75, label: '🎨 Applying safety filters…',   dur: 2000 },
-            { pct: 90, label: '💾 Saving clips to library…',   dur: 1200 },
-            { pct: 99, label: '📦 Cleaning up temp files…',    dur: 600  },
+            { pct: 18, label: activeSource === 'youtube' ? '⬇️ Downloading source…' : '⬆️ Uploading source…', dur: 3000 },
+            { pct: 38, label: '✂️ Creating source slices…', dur: 2200 },
+            { pct: 82, label: '⚙️ ' + profileLabel + ' · encoding clips…', dur: 6500 * multiplier },
+            { pct: 94, label: $('parallel_processing')?.checked ? '🚀 Finalizing parallel renders…' : '💾 Finalizing renders…', dur: 1800 },
+            { pct: 99, label: '📦 Validating output files…', dur: 900 },
         ];
         startProgress('clip-fill', 'clip-pct', 'clip-step', steps);
 
