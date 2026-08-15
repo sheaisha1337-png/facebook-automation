@@ -623,11 +623,9 @@ def download_youtube_subtitles(url, lang, job_id):
         cmd.extend(['--cookies', COOKIES_FILE_PATH])
     if yt_proxy:
         cmd.extend(['--proxy', yt_proxy])
-    if has_curl_cffi:
-        cmd.extend(['--impersonate', 'chrome'])
-        cmd.extend(['--extractor-args', 'youtube:player_client=ios,android,web'])
-    else:
-        cmd.extend(['--extractor-args', 'youtube:player_client=default,-tv'])
+    # Do not force an impersonation target: some Render images expose curl_cffi
+    # without a compatible Chrome target, which makes yt-dlp fail before download.
+    cmd.extend(['--extractor-args', 'youtube:player_client=default,-tv'])
         
     cmd.append(url)
     
@@ -738,17 +736,17 @@ def clip_youtube_video():
             has_cookies = os.path.exists(COOKIES_FILE_PATH) and os.path.getsize(COOKIES_FILE_PATH) > 0
             yt_proxy    = os.environ.get('YT_PROXY', '')
 
-            attempts = []
-            if has_curl_cffi:
-                # Impersonate chrome to bypass TLS fingerprint blocking
-                quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best'
-                attempts.append({'impersonate': 'chrome', 'player_client': 'ios,android,web',
-                                 'quality': quality, 'timeout': 25})
-            else:
-                # Fallback if curl-cffi is not available
-                quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'worst[ext=mp4]/worst'
-                attempts.append({'impersonate': None, 'player_client': 'default,-tv',
-                                 'quality': quality, 'timeout': 25})
+            # Use non-impersonated attempts first. On some Render images curl_cffi
+            # imports successfully but exposes no Chrome target, causing an immediate
+            # YoutubeDL error. Multiple player clients keep the fallback resilient.
+            quality = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best' if has_cookies else 'bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480]/best'
+            attempts = [
+                {'impersonate': None, 'player_client': 'ios,android,web',
+                 'quality': quality, 'timeout': 35},
+                {'impersonate': None, 'player_client': 'default,-tv',
+                 'quality': 'best[height<=480][ext=mp4]/best[height<=480]/worst',
+                 'timeout': 35},
+            ]
 
             stderr_text = ''
             attempt_errors = []
