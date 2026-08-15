@@ -243,6 +243,46 @@ function initClipForm() {
         if (label) label.textContent = file ? file.name : 'No file selected';
     });
 
+    const youtubePanel = $('source-panel-youtube');
+    if (youtubePanel && !$('use-local-helper')) {
+        const localOption = document.createElement('label');
+        localOption.className = 'local-ip-option';
+        localOption.innerHTML = '<input id="use-local-helper" type="checkbox" checked><span><b>Use My IP (Fast)</b><small>Downloads through this computer, then uploads for processing</small></span><i id="helper-status">Checking...</i>';
+        youtubePanel.insertBefore(localOption, youtubePanel.querySelector('.cobalt-download-btn'));
+    }
+
+    async function checkLocalHelper() {
+        const status = $('helper-status');
+        if (!status) return false;
+        try {
+            const response = await fetch('http://127.0.0.1:8765/health', { signal: AbortSignal.timeout(1800) });
+            if (!response.ok) throw new Error('offline');
+            status.textContent = 'CONNECTED'; status.className = 'connected'; return true;
+        } catch (_) {
+            status.textContent = 'HELPER OFFLINE'; status.className = 'offline'; return false;
+        }
+    }
+    checkLocalHelper();
+    setInterval(checkLocalHelper, 15000);
+
+    async function downloadWithLocalIp(url) {
+        const status = $('helper-status');
+        status.textContent = 'DOWNLOADING...'; status.className = 'working';
+        const response = await fetch('http://127.0.0.1:8765/download', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url })
+        });
+        if (!response.ok) {
+            let message = 'Local download failed';
+            try { message = (await response.json()).error || message; } catch (_) {}
+            throw new Error(message);
+        }
+        const blob = await response.blob();
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="?([^";]+)"?/i);
+        status.textContent = 'DOWNLOADED'; status.className = 'connected';
+        return new File([blob], match ? match[1] : 'youtube-video.mp4', { type: 'video/mp4' });
+    }
+
     form.addEventListener('submit', async e => {
         e.preventDefault();
 
@@ -276,12 +316,20 @@ function initClipForm() {
 
         try {
             const fd  = new FormData(form);
+            if (activeSource === 'youtube' && $('use-local-helper')?.checked) {
+                $('clip-step').textContent = 'Downloading with your IP...';
+                const localFile = await downloadWithLocalIp($('url').value.trim());
+                fd.set('video_file', localFile, localFile.name);
+                fd.delete('url');
+                fd.set('import_source', 'upload');
+                $('clip-step').textContent = 'Uploading local download to processor...';
+            }
             const activeMethodBtn = $q('#clip-toggle-auto.active, #clip-toggle-ts.active');
             if (activeMethodBtn) {
                 fd.set('slicing_method', activeMethodBtn.dataset.type);
             }
             // Explicitly set source type
-            fd.set('import_source', activeSource);
+            if (!fd.has('import_source')) fd.set('import_source', activeSource);
             
             const res = await fetch('/api/clip', { method: 'POST', body: fd });
             const data = await res.json();
