@@ -370,6 +370,28 @@
                         </div>
                     </div>
 
+                    <!-- STEP 5: Professional Processing -->
+                    <div class="step-card professional-card">
+                        <div class="step-header"><span class="step-num">5</span><div class="step-title-wrap">
+                            <h3>Professional Processing</h3>
+                            <p class="step-desc">Choose speed, quality, and acceleration features per job.</p>
+                        </div></div>
+                        <div class="form-group">
+                            <label for="processing_profile">⚡ Processing Profile</label>
+                            <select id="processing_profile" name="processing_profile">
+                                <option value="turbo">Turbo — 720p, maximum speed</option>
+                                <option value="balanced" selected>Balanced — 1080p, fast &amp; sharp</option>
+                                <option value="quality">High Quality — 1080p, premium encode</option>
+                            </select>
+                            <span class="input-helper">Balanced is recommended for most social media exports.</span>
+                        </div>
+                        <div class="toggles-grid">
+                            <label class="toggle-control"><span class="toggle-label">🚀 Parallel Clips</span><input type="checkbox" id="parallel_processing" name="parallel_processing" value="true" checked><span class="toggle-switch"></span></label>
+                            <label class="toggle-control"><span class="toggle-label">🎵 Audio Copy</span><input type="checkbox" id="audio_copy" name="audio_copy" value="true"><span class="toggle-switch"></span></label>
+                            <label class="toggle-control"><span class="toggle-label">✂️ Fast Cut</span><input type="checkbox" id="fast_cut" name="fast_cut" value="true"><span class="toggle-switch"></span></label>
+                        </div>
+                        <span class="input-helper">Audio Copy works when speed/pitch are normal. Fast Cut skips all filters for near-instant lossless clips.</span>
+                    </div>
                     <!-- Progress Bar -->
                     <div class="progress-container" id="clip-progress">
                         <div class="progress-details">
