@@ -1,5 +1,6 @@
 Flask==3.0.3
 yt-dlp==2026.6.9
+yt-dlp-ejs
 moviepy==1.0.3
 edge-tts==7.2.8
 pydub==0.25.1
