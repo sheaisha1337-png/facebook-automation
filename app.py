@@ -9,7 +9,7 @@ import PIL.Image
 if not hasattr(PIL.Image, 'ANTIALIAS'):
     PIL.Image.ANTIALIAS = PIL.Image.Resampling.LANCZOS
 
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, session, redirect, url_for
 
 from utils.audio_engine import (
     generate_speech, create_mixed_audio, generate_preview,
@@ -19,6 +19,8 @@ from utils.audio_engine import (
 from utils.video_effects import concatenate_clips, apply_copyright_filters, slice_video
 
 app = Flask(__name__, static_folder='static', static_url_path='')
+app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-in-render')
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', SESSION_COOKIE_SECURE=True)
 
 # Configuration
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -382,6 +384,40 @@ def download_via_invidious(url, output_path):
         except Exception as e:
             print(f'[invidious] Error with {instance}: {e}')
     return False
+
+@app.before_request
+def require_login():
+    allowed = {'login', 'static'}
+    if request.endpoint in allowed:
+        return None
+    if not session.get('authenticated'):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Authentication required'}), 401
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if session.get('authenticated'):
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        import hmac
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        valid_user = os.environ.get('APP_USERNAME', 'kashif')
+        valid_pass = os.environ.get('APP_PASSWORD', '')
+        if valid_pass and hmac.compare_digest(username, valid_user) and hmac.compare_digest(password, valid_pass):
+            session.clear()
+            session['authenticated'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        error = 'Invalid username or password'
+    return render_template('login.html', error=error)
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/')
 def index():
