@@ -155,6 +155,16 @@ def apply_copyright_filters(input_path, output_path, options):
     noise_grain   = _parse_bool(options.get("noise_grain"), False)
     text_overlay  = options.get("text_overlay", "")
     subtitle_path = options.get("subtitle_file_path")
+    profile = options.get("processing_profile", "balanced")
+    fast_cut = _parse_bool(options.get("fast_cut"), False)
+    audio_copy = _parse_bool(options.get("audio_copy"), False)
+
+    profiles = {
+        "turbo":   {"vertical": (720, 1280), "horizontal": (1280, 720), "preset": "ultrafast", "crf": "26"},
+        "balanced":{"vertical": (1080, 1920), "horizontal": (1920, 1080), "preset": "fast", "crf": "22"},
+        "quality": {"vertical": (1080, 1920), "horizontal": (1920, 1080), "preset": "medium", "crf": "18"},
+    }
+    encoder = profiles.get(profile, profiles["balanced"])
 
     speed_factor  = float(options.get("speed", 1.04))
     pitch_semi    = float(options.get("pitch_shift", 0.8))
@@ -164,6 +174,17 @@ def apply_copyright_filters(input_path, output_path, options):
         border_width = int(options.get("border_width", 0))
     except ValueError:
         border_width = 0
+
+    # Fast Cut bypasses all re-encoding and filters for near-instant output.
+    if fast_cut:
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-i", input_path, "-c", "copy", "-movflags", "+faststart", output_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+        )
+        if result.returncode != 0 or not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            err = result.stderr.decode("utf-8", errors="ignore")[-600:]
+            raise RuntimeError(f"FFmpeg fast cut failed: {err}")
+        return
 
     # ── Check if the source has an audio stream ──────────────────────
     probe = subprocess.run(
@@ -177,13 +198,12 @@ def apply_copyright_filters(input_path, output_path, options):
     # ── Build video filter chain ──────────────────────────────────────
     vf = []
 
-    if aspect == "vertical":
-        # Crop to 9:16 center, scale to 1080×1920
-        vf.append("scale=1080:1920:force_original_aspect_ratio=decrease,"
-                  "pad=1080:1920:-1:-1:color=black")
-    elif aspect == "horizontal":
-        vf.append("scale=1920:1080:force_original_aspect_ratio=decrease,"
-                  "pad=1920:1080:-1:-1:color=black")
+    if aspect in ("vertical", "horizontal"):
+        target_w, target_h = encoder[aspect]
+        vf.append(
+            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,"
+            f"pad={target_w}:{target_h}:-1:-1:color=black"
+        )
 
     if border_color != "none" and border_width > 0:
         # Pad with border color
@@ -301,12 +321,19 @@ def apply_copyright_filters(input_path, output_path, options):
     if vf:
         cmd += ["-vf", ",".join(vf)]
 
-    cmd += ["-c:v", "libx264", "-preset", "medium", "-threads", "2", "-filter_threads", "2", "-crf", "20", "-movflags", "+faststart"]
+    cmd += [
+        "-c:v", "libx264", "-preset", encoder["preset"],
+        "-threads", "2", "-filter_threads", "2", "-crf", encoder["crf"],
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart"
+    ]
 
     if has_audio:
         if af:
             cmd += ["-af", ",".join(af)]
-        cmd += ["-c:a", "aac"]
+        if audio_copy and not af:
+            cmd += ["-c:a", "copy"]
+        else:
+            cmd += ["-c:a", "aac", "-b:a", "192k"]
     else:
         cmd += ["-an"]   # no audio stream in source — don't try to encode one
 
