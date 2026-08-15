@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # yt-dlp requires a supported JavaScript runtime for YouTube EJS challenges.
 ENV DENO_INSTALL=/root/.deno
 RUN curl -fsSL https://deno.land/install.sh | sh
-ENV PATH="/root/.deno/bin:\$PATH"
+ENV PATH="/root/.deno/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
 RUN deno --version
 
 RUN sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml 2>/dev/null || true && \
