@@ -36,9 +36,15 @@ COOKIES_FILE_PATH = os.path.join(APP_ROOT, 'yt_cookies.txt')
 RENDER_COOKIES_FILE = '/etc/secrets/yt_cookies.txt'
 yt_cookies_content = os.environ.get('YT_COOKIES')
 if os.path.isfile(RENDER_COOKIES_FILE):
-    COOKIES_FILE_PATH = RENDER_COOKIES_FILE
-    yt_cookies_content = None
-    print(f'[startup] Using Render secret cookie file → {COOKIES_FILE_PATH}')
+    try:
+        # yt-dlp updates its cookie jar, so copy Render's read-only secret first
+        import shutil as _shutil
+        _shutil.copyfile(RENDER_COOKIES_FILE, COOKIES_FILE_PATH)
+        os.chmod(COOKIES_FILE_PATH, 0o600)
+        yt_cookies_content = None
+        print(f'[startup] Copied Render cookie secret to writable jar → {COOKIES_FILE_PATH}')
+    except Exception as _copy_error:
+        print(f'[startup] Failed to prepare writable cookie jar: {_copy_error}')
 
 if yt_cookies_content:
     try:
