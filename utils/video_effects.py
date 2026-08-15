@@ -293,7 +293,7 @@ def apply_copyright_filters(input_path, output_path, options):
                         escaped_p = p.replace("'", "'\\''").replace(":", "\\:")
                         fontfile_param = f":fontfile='{escaped_p}'"
                         break
-            vf.append(f"drawtext=text='{clean_text}'{fontfile_param}:x=(w-text_w)/2:y=100:fontsize=36:fontcolor=white:box=1:boxcolor=black@0.4:boxborderw=6")
+            vf.append(f"drawtext=text='{clean_text}'{fontfile_param}:x=(w-text_w)/2*(1+sin(t*0.55)):y=(h-text_h)/2*(1+sin(t*0.37+1.7)):fontsize=32:fontcolor=white@0.24:shadowcolor=black@0.30:shadowx=2:shadowy=2")
         else:
             print("[video_effects] Warning: 'drawtext' filter is not supported by this FFmpeg build. Skipping text overlay.")
 
