@@ -48,7 +48,7 @@ def concatenate_clips(video_paths, aspect_ratio="vertical", output_path=None):
     if not existing:
         raise ValueError("None of the provided video paths exist or could be loaded.")
 
-    target_w, target_h = (540, 960) if aspect_ratio == "vertical" else (960, 540)
+    target_w, target_h = (1080, 1920) if aspect_ratio == "vertical" else (1920, 1080)
 
     # ── Step 1: Normalize every clip to target resolution ────────────
     norm_dir = tempfile.mkdtemp(prefix="concat_norm_")
@@ -65,7 +65,7 @@ def concatenate_clips(video_paths, aspect_ratio="vertical", output_path=None):
         cmd = [
             "ffmpeg", "-y", "-i", path,
             "-vf", vf,
-            "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-filter_threads", "1", "-crf", "28",
+            "-c:v", "libx264", "-preset", "medium", "-threads", "2", "-filter_threads", "2", "-crf", "20",
             "-c:a", "aac", "-ar", "44100", "-ac", "2",
             norm_path
         ]
@@ -179,11 +179,11 @@ def apply_copyright_filters(input_path, output_path, options):
 
     if aspect == "vertical":
         # Crop to 9:16 center, scale to 1080×1920
-        vf.append("scale=540:960:force_original_aspect_ratio=decrease,"
-                  "pad=540:960:-1:-1:color=black")
+        vf.append("scale=1080:1920:force_original_aspect_ratio=decrease,"
+                  "pad=1080:1920:-1:-1:color=black")
     elif aspect == "horizontal":
-        vf.append("scale=960:540:force_original_aspect_ratio=decrease,"
-                  "pad=960:540:-1:-1:color=black")
+        vf.append("scale=1920:1080:force_original_aspect_ratio=decrease,"
+                  "pad=1920:1080:-1:-1:color=black")
 
     if border_color != "none" and border_width > 0:
         # Pad with border color
@@ -301,7 +301,7 @@ def apply_copyright_filters(input_path, output_path, options):
     if vf:
         cmd += ["-vf", ",".join(vf)]
 
-    cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-filter_threads", "1", "-crf", "28", "-movflags", "+faststart"]
+    cmd += ["-c:v", "libx264", "-preset", "medium", "-threads", "2", "-filter_threads", "2", "-crf", "20", "-movflags", "+faststart"]
 
     if has_audio:
         if af:
