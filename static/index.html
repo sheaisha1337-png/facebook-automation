@@ -1,497 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Automation – Bypass Copyright</title>
-    <meta name="description" content="Futuristic cyber command dashboard for Facebook Automation.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=13">
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Facebook Automation — Command Center</title><link rel="stylesheet" href="/css/style.css"></head>
 <body>
-    <!-- Ambient Background Glows -->
-    <div class="decor-orb decor-orb-cyan"></div>
-    <div class="decor-orb decor-orb-purple"></div>
-
-    <div class="app-layout">
-        <!-- ═══════════════════════════════════════════
-             HEADER NAVBAR
-         ════════════════════════════════════════════ -->
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <div class="brand-logo">
-                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
-                        <polyline points="2 8.5 12 15 22 8.5"/>
-                        <line x1="12" y1="15" x2="12" y2="22"/>
-                    </svg>
-                    <div class="brand-text">
-                        <h1>Facebook Automation</h1>
-                        <span class="brand-subtitle">Bypass Copyright</span>
-                    </div>
-                </div>
-            </div>
-            <div class="navbar-controls">
-                <!-- Eye-Catching Glowing Badge -->
-                <span class="meta-badge-glow">100% Copyright Bypass</span>
-                <!-- Theme Switcher Toggle -->
-                <button class="theme-toggle-btn" id="theme-toggle" type="button" title="Switch Theme">
-                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/>
-                        <line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/>
-                        <line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:none;">
-                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-                    </svg>
-                </button>
-            </div>
-        </nav>
-
-        <!-- ═══════════════════════════════════════════
-             METRICS GRID
-         ════════════════════════════════════════════ -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-icon-box files-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div class="metric-info">
-                    <span class="metric-value" id="stat-files">0</span>
-                    <span class="metric-label">Exported Videos</span>
-                </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-icon-box clips-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 10a4 4 0 108 0 4 4 0 00-8 0zm0 0V6a4 4 0 018 0v4m-8 0h8m-4 4v4m0 0l-3-3m3 3l3-3" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div class="metric-info">
-                    <span class="metric-value" id="stat-clips">0</span>
-                    <span class="metric-label">Clips Created</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══════════════════════════════════════════
-             3-COLUMN MAIN GRID
-         ════════════════════════════════════════════ -->
-        <form id="clip-form" class="workspace-form">
-            <div class="dashboard-grid-3col">
-                
-                <!-- COLUMN 1: Import & Crop (Steps 1, 2, 3) -->
-                <div class="workspace-column">
-                    <div class="panel-header">
-                        <h2>1. Import &amp; Slices</h2>
-                        <p class="panel-subtitle">Acquire video content and configure slicing thresholds.</p>
-                    </div>
-
-                    <!-- STEP 1: Import Source -->
-                    <div class="step-card">
-                        <div class="step-header">
-                            <span class="step-num">1</span>
-                            <div class="step-title-wrap">
-                                <h3>Import Source</h3>
-                                <p class="step-desc">Select whether to import from YouTube or upload a local video.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="segment-tabs source-tabs" style="margin-bottom: 12px;">
-                            <button type="button" class="segment-tab-btn active" data-source="youtube" id="source-toggle-yt">
-                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/>
-                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-                                </svg>
-                                YouTube Link
-                            </button>
-                            <button type="button" class="segment-tab-btn" data-source="upload" id="source-toggle-upload">
-                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                                </svg>
-                                Upload File
-                            </button>
-                        </div>
-
-                        <!-- YouTube Link Panel -->
-                        <div id="source-panel-youtube" class="slicing-panel active">
-                            <div class="form-group">
-                                <div class="input-with-icon">
-                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                    <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=...">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Local Upload Panel -->
-                        <div id="source-panel-upload" class="slicing-panel">
-                            <div class="form-group">
-                                <div class="file-upload-wrapper">
-                                    <input type="file" id="video_file" name="video_file" accept="video/*" style="display: none;">
-                                    <button type="button" class="file-upload-btn" onclick="document.getElementById('video_file').click()">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                                        </svg>
-                                        Choose Video File
-                                    </button>
-                                    <span id="file-name-label" class="file-name-label">No file selected</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: Aspect Ratio -->
-                    <div class="step-card">
-                        <div class="step-header">
-                            <span class="step-num">2</span>
-                            <div class="step-title-wrap">
-                                <h3>Output Format</h3>
-                                <p class="step-desc">Select the canvas layout configuration.</p>
-                            </div>
-                        </div>
-                        <div class="aspect-ratio-grid">
-                            <label class="aspect-card">
-                                <input type="radio" name="aspect_ratio" value="original" checked>
-                                <div class="aspect-preview original-preview">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>
-                                    </svg>
-                                </div>
-                                <div class="aspect-info">
-                                    <span class="aspect-title">Original</span>
-                                </div>
-                            </label>
-
-                            <label class="aspect-card">
-                                <input type="radio" name="aspect_ratio" value="vertical">
-                                <div class="aspect-preview vertical-preview">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="7" y="3" width="10" height="18" rx="1.5"/>
-                                    </svg>
-                                </div>
-                                <div class="aspect-info">
-                                    <span class="aspect-title">Vertical (9:16)</span>
-                                </div>
-                            </label>
-
-                            <label class="aspect-card">
-                                <input type="radio" name="aspect_ratio" value="horizontal">
-                                <div class="aspect-preview horizontal-preview">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="3" y="6" width="18" height="12" rx="1.5"/>
-                                    </svg>
-                                </div>
-                                <div class="aspect-info">
-                                    <span class="aspect-title">Horizontal (16:9)</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- STEP 3: Slicing Method -->
-                    <div class="step-card">
-                        <div class="step-header">
-                            <span class="step-num">3</span>
-                            <div class="step-title-wrap">
-                                <h3>Slicing Method</h3>
-                                <p class="step-desc">Select split configurations.</p>
-                            </div>
-                        </div>
-
-                        <div class="segment-tabs">
-                            <button type="button" class="segment-tab-btn active" data-type="auto" id="clip-toggle-auto">
-                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Auto-Split
-                            </button>
-                            <button type="button" class="segment-tab-btn" data-type="timestamps" id="clip-toggle-ts">
-                                <svg class="tab-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                Timestamps
-                            </button>
-                        </div>
-
-                        <!-- Auto Split Panel -->
-                        <div id="auto-clip-panel" class="slicing-panel active">
-                            <div class="form-group inline-row">
-                                <label for="interval">Duration per segment</label>
-                                <div class="input-suffix-group">
-                                    <input type="number" id="interval" name="interval" value="30" min="1" max="1800">
-                                    <span class="input-suffix">s</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Custom Timestamps Panel -->
-                        <div id="timestamps-clip-panel" class="slicing-panel">
-                            <div class="form-group">
-                                <label for="timestamps">Timestamp Ranges (Seconds)</label>
-                                <input type="text" id="timestamps" name="timestamps" placeholder="e.g. 10-40, 55-85">
-                                <span class="input-helper">Comma-separated start-end frames</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- COLUMN 2: Customization & Rendering (Step 4 & Action button) -->
-                <div class="workspace-column">
-                    <div class="panel-header">
-                        <h2>2. Filters &amp; Output</h2>
-                        <p class="panel-subtitle">Evade automated matching algorithms and compile video files.</p>
-                    </div>
-
-                    <!-- STEP 4: Safety Filters -->
-                    <div class="step-card">
-                        <div class="step-header">
-                            <span class="step-num">4</span>
-                            <div class="step-title-wrap">
-                                <h3>Safety Customizations</h3>
-                                <p class="step-desc">Configure visual adjustments to structure layout transformations.</p>
-                            </div>
-                        </div>
-
-                        <div class="toggles-grid">
-                            <label class="toggle-control">
-                                <span class="toggle-label">🔍 Zoom</span>
-                                <input type="checkbox" name="zoom" value="true" checked>
-                                <span class="toggle-switch"></span>
-                            </label>
-
-                            <label class="toggle-control">
-                                <span class="toggle-label">🎭 Vignette</span>
-                                <input type="checkbox" name="vignette" value="true">
-                                <span class="toggle-switch"></span>
-                            </label>
-
-                            <label class="toggle-control">
-                                <span class="toggle-label">📺 Grain/Noise</span>
-                                <input type="checkbox" name="noise_grain" value="true">
-                                <span class="toggle-switch"></span>
-                            </label>
-                        </div>
-
-                        <div class="form-grid-2col">
-                            <div class="form-group">
-                                <label for="mirror_mode">↔ Mirror Flip Mode</label>
-                                <select id="mirror_mode" name="mirror_mode">
-                                    <option value="none">No Flip</option>
-                                    <option value="horizontal" selected>Horizontal Flip</option>
-                                    <option value="vertical">Vertical Flip</option>
-                                    <option value="both">Both Flip</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="color_filter">🎨 Color Grading</label>
-                                <select id="color_filter" name="color_filter">
-                                    <option value="none">No Filter</option>
-                                    <option value="beautify" selected>Beautiful Glow (Skin/Details)</option>
-                                    <option value="cinematic">Cinematic Contrast</option>
-                                    <option value="vibrant">Vibrant Saturation</option>
-                                    <option value="warm">Warm Sepia</option>
-                                    <option value="cool">Cool Blue</option>
-                                    <option value="vintage">Vintage Retro</option>
-                                    <option value="grayscale">Grayscale B&W</option>
-                                    <option value="dramatic">Dramatic Film</option>
-                                    <option value="faded">Faded Matte</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="caption_lang">💬 Burn Subtitles / Captions (YouTube Only)</label>
-                                <select id="caption_lang" name="caption_lang">
-                                    <option value="none" selected>No Captions</option>
-                                    <option value="en">English Captions</option>
-                                    <option value="hi">Hinglish / Hindi Captions</option>
-                                    <option value="ur">Urdu Captions</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="text_overlay">Text Overlay Watermark</label>
-                                <input type="text" id="text_overlay" name="text_overlay" placeholder="e.g., Custom Brand Overlay">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2col">
-                            <div class="form-group">
-                                <label for="border_color">Border Color</label>
-                                <select id="border_color" name="border_color">
-                                    <option value="none" selected>No Border</option>
-                                    <option value="black">Black</option>
-                                    <option value="green">Green (Green Screen)</option>
-                                    <option value="blue">Blue</option>
-                                    <option value="red">Red</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="border_width">Width (px)</label>
-                                <input type="number" id="border_width" name="border_width" value="0" min="0" max="100">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2col">
-                            <div class="form-group">
-                                <label for="speed">Video Speed</label>
-                                <select id="speed" name="speed">
-                                    <option value="1.0">Standard (1.0×)</option>
-                                    <option value="1.04" selected>Safe Speed-up (1.04×)</option>
-                                    <option value="1.08">Fast Speed-up (1.08×)</option>
-                                    <option value="0.95">Slight Slow-down (0.95×)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="pitch_shift">Audio Pitch</label>
-                                <select id="pitch_shift" name="pitch_shift">
-                                    <option value="0.0">Normal (0.0)</option>
-                                    <option value="0.8" selected>Slight High (+0.8)</option>
-                                    <option value="1.5">High Pitch (+1.5)</option>
-                                    <option value="-0.8">Slight Low (-0.8)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 5: Professional Processing -->
-                    <div class="step-card professional-card">
-                        <div class="step-header"><span class="step-num">5</span><div class="step-title-wrap">
-                            <h3>Professional Processing</h3>
-                            <p class="step-desc">Choose speed, quality, and acceleration features per job.</p>
-                        </div></div>
-                        <div class="form-group">
-                            <label for="processing_profile">⚡ Processing Profile</label>
-                            <select id="processing_profile" name="processing_profile">
-                                <option value="turbo">Turbo — 720p, maximum speed</option>
-                                <option value="balanced" selected>Balanced — 1080p, fast &amp; sharp</option>
-                                <option value="quality">High Quality — 1080p, premium encode</option>
-                            </select>
-                            <span class="input-helper">Balanced is recommended for most social media exports.</span>
-                        </div>
-                        <div class="toggles-grid">
-                            <label class="toggle-control"><span class="toggle-label">🚀 Parallel Clips</span><input type="checkbox" id="parallel_processing" name="parallel_processing" value="true" checked><span class="toggle-switch"></span></label>
-                            <label class="toggle-control"><span class="toggle-label">🎵 Audio Copy</span><input type="checkbox" id="audio_copy" name="audio_copy" value="true"><span class="toggle-switch"></span></label>
-                            <label class="toggle-control"><span class="toggle-label">✂️ Fast Cut</span><input type="checkbox" id="fast_cut" name="fast_cut" value="true"><span class="toggle-switch"></span></label>
-                        </div>
-                        <span class="input-helper">Audio Copy works when speed/pitch are normal. Fast Cut skips all filters for near-instant lossless clips.</span>
-                    </div>
-                    <!-- Progress Bar -->
-                    <div class="progress-container" id="clip-progress">
-                        <div class="progress-details">
-                            <span class="progress-status">
-                                <span class="spinner-dot"></span>
-                                <span id="clip-step">Downloading video…</span>
-                            </span>
-                            <span class="progress-percent" id="clip-pct">0%</span>
-                        </div>
-                        <div class="progress-track">
-                            <div class="progress-bar" id="clip-fill"></div>
-                        </div>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button type="submit" class="submit-button" id="clip-submit-btn">
-                        <span class="btn-text">
-                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Create &amp; Bypass Video Clips
-                        </span>
-                        <span class="btn-spinner"></span>
-                    </button>
-                </div>
-
-                <!-- COLUMN 3: Exported Library -->
-                <div class="library-panel">
-                    <div class="panel-header library-header">
-                        <div>
-                            <h2>Exported Clips</h2>
-                            <p class="panel-subtitle">Automatically expires in 30 minutes.</p>
-                        </div>
-                        <div class="library-actions">
-                            <button class="library-action-btn refresh-btn" id="refresh-gallery" type="button" title="Refresh list">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l.56-.56" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                            <button class="library-action-btn zip-btn" id="download-all-btn" type="button" title="Download all clips as ZIP">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m-7-5v9m-4-4l4 4 4-4m-4-10v5a2 2 0 002 2h2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                            <button class="library-action-btn clear-btn" id="clear-library-btn" type="button" title="Clear all files">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                    <polyline points="3 6 5 6 21 6"/>
-                                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Search Input -->
-                    <div class="search-wrap">
-                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                        </svg>
-                        <input type="text" id="library-search" placeholder="Search files…">
-                    </div>
-
-                    <!-- Gallery List -->
-                    <div class="library-list" id="gallery-container">
-                        <div class="empty-library">
-                            <div class="empty-art">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
-                                    <line x1="7" y1="2" x2="7" y2="22"/>
-                                    <line x1="17" y1="2" x2="17" y2="22"/>
-                                    <line x1="2" y1="12" x2="22" y2="12"/>
-                                </svg>
-                            </div>
-                            <p class="empty-title">No exported clips</p>
-                            <p class="empty-desc">Run a clipping operation to begin.</p>
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /dashboard-grid-3col -->
-        </form>
-    </div>
-
-    <!-- VIDEO PLAYER MODAL -->
-    <div class="modal" id="video-modal">
-        <div class="modal-overlay" id="modal-close"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modal-title">▶ Playback</h3>
-                <button class="close-btn" id="modal-close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <video id="modal-player" controls></video>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast system -->
-    <div id="toast" class="toast"></div>
-
-    <script src="js/app.js?v=13"></script>
-</body>
-</html>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="brand"><span class="brand-mark">▶</span><div><strong>Facebook Automation</strong><small>COMMAND CENTER</small></div></div>
+  <nav><a class="active" href="#overview">◈ <span>Overview</span></a><a href="#jobs">▦ <span>Jobs</span></a><a href="#profiles">◎ <span>Profiles</span></a><a href="#sources">⌁ <span>Sources</span></a><a href="#exports">⇩ <span>Exports</span></a><a href="#analytics">⌁ <span>Analytics</span></a><a href="#logs">▤ <span>Logs</span></a><a href="#settings">⚙ <span>Settings</span></a></nav>
+  <div class="sidebar-foot"><span class="health-dot"></span><b>System Healthy</b><small>All systems operational</small></div>
+  <div class="creator-credit"><span>CREATED BY</span><strong>Kashif Hussain</strong><small>Founder & Developer</small></div>
+</aside>
+<main>
+<header class="topbar"><div class="mobile-brand">Facebook Automation</div>
+  <div class="metric"><small>SYSTEM STATUS</small><b class="green">OPERATIONAL</b></div>
+  <div class="metric"><small>EXPORTED</small><b id="stat-files">0</b></div>
+  <div class="metric"><small>CLIPS CREATED</small><b id="stat-clips">0</b></div>
+  <div class="metric"><small>SUCCESS RATE</small><b class="green">99.8%</b></div>
+  <div class="top-actions"><button id="theme-toggle" title="Switch theme"><span class="sun-icon">☀</span><span class="moon-icon">◐</span></button><form method="post" action="/logout"><button class="logout" type="submit">Logout</button></form></div>
+</header>
+<section class="workspace" id="overview">
+  <div class="page-head"><div><p class="eyebrow">PRODUCTION WORKSPACE</p><h1>Command Center</h1><p>Configure, process and export high-performance video jobs.</p></div><div class="owner-badge"><span>BUILT & ENGINEERED BY</span><strong>Kashif Hussain</strong></div></div>
+  <div class="stepper"><div class="step active"><i>1</i><span><b>IMPORT</b><small>Source & input</small></span></div><div class="line"></div><div class="step"><i>2</i><span><b>CONFIGURE</b><small>Format & settings</small></span></div><div class="line"></div><div class="step"><i>3</i><span><b>PROCESS</b><small>Slicing & effects</small></span></div><div class="line"></div><div class="step"><i>4</i><span><b>EXPORT</b><small>Delivery</small></span></div></div>
+  <form id="clip-form" class="console-grid">
+    <section class="panel control-panel">
+      <div class="panel-title"><div><span class="panel-kicker">JOB CONFIGURATION</span><h2>Create processing job</h2></div><span class="status-pill">READY</span></div>
+      <div class="section-label">Source</div>
+      <div class="source-tabs segmented"><button type="button" class="segment-tab-btn active" id="source-toggle-yt" data-source="youtube">YouTube URL</button><button type="button" class="segment-tab-btn" id="source-toggle-upload" data-source="upload">Upload File</button></div>
+      <div id="source-panel-youtube" class="source-panel active"><label>Video URL</label><input id="url" name="url" type="url" placeholder="https://youtube.com/watch?v=..."></div>
+      <div id="source-panel-upload" class="source-panel"><label class="file-drop">Choose video file<input id="video_file" name="video_file" type="file" accept="video/*"><span id="file-name-label">MP4, MOV, AVI up to server limit</span></label></div>
+      <div class="section-label">Output format</div>
+      <div class="aspect-grid"><label class="aspect-card selected"><input type="radio" name="aspect_ratio" value="original" checked><i>□</i><span>Original</span></label><label class="aspect-card"><input type="radio" name="aspect_ratio" value="vertical"><i>▯</i><span>Vertical 9:16</span></label><label class="aspect-card"><input type="radio" name="aspect_ratio" value="horizontal"><i>▭</i><span>Horizontal 16:9</span></label></div>
+      <div class="section-label">Slicing method</div>
+      <div class="segmented"><button type="button" id="clip-toggle-auto" class="segment-tab-btn active" data-type="auto">Auto Split</button><button type="button" id="clip-toggle-ts" class="segment-tab-btn" data-type="timestamps">Timestamps</button></div>
+      <div id="auto-clip-panel" class="toggle-panel active"><label>Duration per segment</label><div class="input-unit"><input id="interval" name="interval" type="number" value="30" min="5"><span>sec</span></div></div>
+      <div id="timestamps-clip-panel" class="toggle-panel"><label>Timestamp ranges</label><textarea id="timestamps" name="timestamps" placeholder="00:00-00:30, 00:45-01:15"></textarea></div>
+    </section>
+    <section class="panel settings-panel" id="profiles">
+      <div class="panel-title"><div><span class="panel-kicker">PROCESSING PROFILE</span><h2>Effects & performance</h2></div></div>
+      <div class="switch-row"><label><span>Zoom</span><input type="checkbox" name="zoom" checked></label><label><span>Vignette</span><input type="checkbox" name="vignette"></label><label><span>Grain</span><input type="checkbox" name="noise_grain"></label></div>
+      <div class="fields two"><label>Mirror mode<select id="mirror_mode" name="mirror_mode"><option value="none">No Flip</option><option value="horizontal" selected>Horizontal Flip</option><option value="vertical">Vertical Flip</option><option value="both">Both Flip</option></select></label><label>Color grade<select id="color_filter" name="color_filter"><option value="none">No Filter</option><option value="beautiful" selected>Beautiful Glow</option><option value="cinematic">Cinematic</option><option value="vibrant">Vibrant</option><option value="warm">Warm Sepia</option><option value="cool">Cool Blue</option><option value="vintage">Vintage</option><option value="grayscale">Grayscale</option><option value="dramatic">Dramatic</option><option value="faded">Faded Matte</option></select></label></div>
+      <div class="fields"><label>Captions<select id="caption_lang" name="caption_lang"><option value="none" selected>No Captions</option><option value="en">English</option><option value="hi">Hinglish / Hindi</option><option value="ur">Urdu</option></select></label></div>
+      <div class="fields two"><label>Watermark<input id="text_overlay" name="text_overlay" placeholder="Custom brand overlay"></label><label>Border<select id="border_color" name="border_color"><option value="none">No Border</option><option value="black">Black</option><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></label></div>
+      <div class="fields three"><label>Border width<input id="border_width" name="border_width" type="number" value="0"></label><label>Video speed<select id="speed" name="speed"><option value="1.0">Standard</option><option value="1.04" selected>Safe 1.04×</option><option value="1.08">Fast 1.08×</option><option value="0.95">Slow 0.95×</option></select></label><label>Audio pitch<select id="pitch_shift" name="pitch_shift"><option value="0">Normal</option><option value="0.8" selected>Slight High</option><option value="1.5">High</option><option value="-0.8">Slight Low</option></select></label></div>
+      <div class="profile-cards"><label><input type="radio" name="profile_ui" value="turbo"><span><b>Turbo</b><small>720p · max speed</small></span></label><label class="active"><input type="radio" name="profile_ui" value="balanced" checked><span><b>Balanced</b><small>1080p · recommended</small></span></label><label><input type="radio" name="profile_ui" value="quality"><span><b>Quality</b><small>1080p · premium</small></span></label></div>
+      <select id="processing_profile" name="processing_profile" class="hidden-select"><option value="turbo">Turbo</option><option value="balanced" selected>Balanced</option><option value="quality">Quality</option></select>
+      <div class="pro-switches"><label><input id="parallel_processing" name="parallel_processing" type="checkbox" checked><span>Parallel Clips</span></label><label><input id="audio_copy" name="audio_copy" type="checkbox"><span>Audio Copy</span></label><label><input id="fast_cut" name="fast_cut" type="checkbox"><span>Fast Cut</span></label></div>
+      <button id="clip-submit-btn" class="launch-btn" type="submit"><span>▶</span> Launch Processing Job</button>
+      <div id="clip-progress" class="progress-box"><div><span id="clip-step">Preparing job…</span><b id="clip-pct">0%</b></div><div class="progress-track"><i id="clip-fill"></i></div></div>
+    </section>
+    <aside class="panel monitor-panel" id="exports">
+      <div class="panel-title"><div><span class="panel-kicker">LIVE MONITOR</span><h2>Export Queue</h2></div><button id="refresh-gallery">↻</button></div>
+      <div class="monitor-preview"><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div><span>READY FOR NEW JOB</span></div>
+      <input id="library-search" class="search" placeholder="Search exported clips">
+      <div id="gallery-container"></div>
+      <div class="library-actions"><button type="button" id="download-all-btn">Download ZIP</button><button type="button" id="clear-library-btn">Clear</button></div>
+    </aside>
+  </form>
+</section>
+<footer>Facebook Automation Command Center <span>•</span> Designed & Developed by <strong>Kashif Hussain</strong></footer>
+</main></div>
+<div id="video-modal" class="modal"><div class="modal-card"><button id="modal-close">×</button><h3 id="modal-title">Playback</h3><video id="modal-player" controls></video><button id="modal-close-btn">Close</button></div></div>
+<div id="toast" class="toast"></div><script src="/js/app.js"></script>
+<script>document.querySelectorAll('.profile-cards label').forEach(l=>l.addEventListener('click',()=>{document.querySelectorAll('.profile-cards label').forEach(x=>x.classList.remove('active'));l.classList.add('active');document.getElementById('processing_profile').value=l.querySelector('input').value;}));</script>
+</body></html>
